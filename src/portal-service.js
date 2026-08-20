@@ -5,16 +5,18 @@ import { PortalError } from "./portals/errors.js";
 import { MockPortalDoConsignado } from "./portals/mock-portal.js";
 import { PortalDoConsignado } from "./portals/portal-do-consignado.js";
 
-export function createPortalService(config) {
+export function createPortalService(config, dependencies = {}) {
+  const createPortal = dependencies.createPortal || ((definition) => (
+    config.portalMode === "real"
+      ? new PortalDoConsignado(definition)
+      : new MockPortalDoConsignado(definition)
+  ));
   const integrations = new Map(
     config.portals.map((definition) => [
       definition.id,
       {
         definition,
-        portal:
-          config.portalMode === "real"
-            ? new PortalDoConsignado(definition)
-            : new MockPortalDoConsignado(definition),
+        portal: createPortal(definition),
         queue: new SerialQueue(),
       },
     ]),
@@ -40,7 +42,7 @@ export function createPortalService(config) {
     return candidates;
   }
 
-  function selectQueryIntegration(queryPortalId) {
+  function selectQueryIntegrations(queryPortalId) {
     const connected = getQueryIntegrations(queryPortalId).filter(
       ({ portal }) => portal.status().state === "connected",
     );
@@ -53,9 +55,9 @@ export function createPortalService(config) {
     }
 
     const cursor = roundRobinCursor.get(queryPortalId) || 0;
-    const selected = connected[cursor % connected.length];
+    const start = cursor % connected.length;
     roundRobinCursor.set(queryPortalId, cursor + 1);
-    return selected;
+    return [...connected.slice(start), ...connected.slice(0, start)];
   }
 
   function record(entry) {
@@ -96,35 +98,60 @@ export function createPortalService(config) {
     },
 
     query(queryPortalId, cpf, actor) {
-      const { definition, portal, queue } = selectQueryIntegration(queryPortalId);
-      return queue.run(async () => {
-        const startedAt = new Date().toISOString();
-        try {
-          const result = await portal.queryMargin(cpf);
-          record({
-            id: randomUUID(),
-            portal: definition.name,
-            cpf: maskCpf(cpf),
-            actor,
-            status: "success",
-            startedAt,
-            finishedAt: new Date().toISOString(),
-          });
-          return result;
-        } catch (error) {
-          record({
-            id: randomUUID(),
-            portal: definition.name,
-            cpf: maskCpf(cpf),
-            actor,
-            status: "error",
-            message: error.message,
-            startedAt,
-            finishedAt: new Date().toISOString(),
-          });
-          throw error;
+      const candidates = selectQueryIntegrations(queryPortalId);
+      const startedAt = new Date().toISOString();
+      return (async () => {
+        let lastSessionError;
+        for (const { definition, portal, queue } of candidates) {
+          try {
+            const result = await queue.run(() => portal.queryMargin(cpf));
+            record({
+              id: randomUUID(),
+              portal: definition.name,
+              cpf: maskCpf(cpf),
+              actor,
+              status: "success",
+              startedAt,
+              finishedAt: new Date().toISOString(),
+            });
+            return result;
+          } catch (error) {
+            if (["PORTAL_SESSION_EXPIRED", "PORTAL_NOT_CONNECTED"].includes(error.code)) {
+              lastSessionError = error;
+              continue;
+            }
+
+            record({
+              id: randomUUID(),
+              portal: definition.name,
+              cpf: maskCpf(cpf),
+              actor,
+              status: "error",
+              message: error.message,
+              startedAt,
+              finishedAt: new Date().toISOString(),
+            });
+            throw error;
+          }
         }
-      });
+
+        const error = lastSessionError || new PortalError(
+          "PORTAL_NOT_CONNECTED",
+          "Nenhum acesso conectado permaneceu disponível para a consulta.",
+          409,
+        );
+        record({
+          id: randomUUID(),
+          portal: candidates.map(({ definition }) => definition.name).join(" / "),
+          cpf: maskCpf(cpf),
+          actor,
+          status: "error",
+          message: error.message,
+          startedAt,
+          finishedAt: new Date().toISOString(),
+        });
+        throw error;
+      })();
     },
 
     async close() {

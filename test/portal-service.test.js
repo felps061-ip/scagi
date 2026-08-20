@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createPortalService } from "../src/portal-service.js";
+import { PortalError } from "../src/portals/errors.js";
 
 const portalDefinitions = [
   {
@@ -69,5 +70,41 @@ test("rejeita identificadores de portal desconhecidos", async () => {
     () => service.query("portal-inexistente", "52998224725", "admin"),
     (error) => error.code === "INVALID_PORTAL" && error.status === 400,
   );
+  await service.close();
+});
+
+test("tenta outro acesso quando a sessão selecionada foi invalidada", async () => {
+  const attempts = [];
+  const service = createPortalService(
+    { portalMode: "real", portals: portalDefinitions.slice(0, 2) },
+    {
+      createPortal(definition) {
+        let state = "connected";
+        return {
+          status: () => ({ state, mode: "real" }),
+          async queryMargin(cpf) {
+            attempts.push(definition.id);
+            if (definition.id === "gov-sp-primary") {
+              state = "disconnected";
+              throw new PortalError(
+                "PORTAL_SESSION_EXPIRED",
+                "A sessão do portal expirou.",
+                409,
+              );
+            }
+            return { portal: definition.queryPortalId, connectionId: definition.id, cpf };
+          },
+          async close() {},
+        };
+      },
+    },
+  );
+
+  const result = await service.query("portal-consignado", "52998224725", "admin");
+
+  assert.equal(result.connectionId, "gov-sp-secondary");
+  assert.deepEqual(attempts, ["gov-sp-primary", "gov-sp-secondary"]);
+  assert.equal(service.list().find(({ id }) => id === "gov-sp-primary").state, "disconnected");
+  assert.deepEqual(service.history().map(({ status }) => status), ["success"]);
   await service.close();
 });

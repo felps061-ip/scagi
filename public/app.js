@@ -268,9 +268,7 @@ $("#query-form").addEventListener("submit", async (event) => {
     showToast(error.message);
     if (["PORTAL_NOT_CONNECTED", "PORTAL_SESSION_EXPIRED"].includes(error.code)) switchView("integrations");
   } finally {
-    $("#query-button").disabled = !selectedConnections().some(
-      (portal) => portal.state === "connected",
-    );
+    await loadPortals();
   }
 });
 
