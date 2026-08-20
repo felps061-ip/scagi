@@ -28,6 +28,16 @@ const portalDefinitions = [
     mockAgency: "PREFEITURA DE SÃO PAULO",
     mockDelay: 0,
   },
+  {
+    id: "piaui-primary",
+    adapter: "consigfacil-piaui",
+    queryPortalId: "piaui",
+    name: "Governo do Piauí",
+    governments: ["Piauí"],
+    queryFields: ["registration"],
+    mockAgency: "GOVERNO DO ESTADO DO PIAUÍ",
+    mockDelay: 0,
+  },
 ];
 
 test("alterna consultas Gov SP entre os acessos conectados", async () => {
@@ -37,6 +47,7 @@ test("alterna consultas Gov SP entre os acessos conectados", async () => {
     "gov-sp-primary",
     "gov-sp-secondary",
     "prefeitura-sao-paulo-primary",
+    "piaui-primary",
   ]);
 
   const first = await service.query("portal-consignado", "52998224725", "admin");
@@ -61,6 +72,72 @@ test("mantém a Prefeitura fora do rodízio estadual", async () => {
   assert.equal(result.portal, "prefeitura-sao-paulo");
   assert.equal(result.connectionId, "prefeitura-sao-paulo-primary");
   assert.equal(result.employments[0].agency, "PREFEITURA DE SÃO PAULO");
+  await service.close();
+});
+
+test("consulta o Piauí com matrícula e cartões próprios no modo de demonstração", async () => {
+  const service = createPortalService({ portalMode: "mock", portals: portalDefinitions });
+  assert.deepEqual(service.requirements("piaui"), { fields: ["registration"] });
+  const result = await service.query(
+    "piaui",
+    "52998224725",
+    "admin",
+    { registration: "2148609" },
+  );
+  assert.equal(result.connectionId, "piaui-primary");
+  assert.equal(result.employments[0].registration, "2148609");
+  assert.deepEqual(
+    result.employments[0].margins.map(({ product }) => product),
+    ["MARGEM CONSIGNÁVEL", "MARGEM CARTÃO"],
+  );
+  await service.close();
+});
+
+test("mantém o CAPTCHA da consulta vinculado ao operador", async () => {
+  const definition = portalDefinitions[3];
+  const service = createPortalService(
+    { portalMode: "real", portals: [definition] },
+    {
+      createPortal() {
+        return {
+          status: () => ({ state: "connected", mode: "real" }),
+          async queryMargin() {
+            return {
+              requiresCaptcha: true,
+              challengeType: "query_captcha",
+              portal: "piaui",
+              captchaImage: "data:image/png;base64,teste",
+            };
+          },
+          async submitQueryCaptcha() {
+            return { portal: "piaui", connectionId: "piaui-primary" };
+          },
+          cancelPendingQuery() {},
+          async close() {},
+        };
+      },
+    },
+  );
+
+  const challenge = await service.query(
+    "piaui",
+    "52998224725",
+    "vendedor1",
+    { registration: "2148609" },
+  );
+  assert.equal(challenge.requiresCaptcha, true);
+  assert.ok(challenge.challengeId);
+  assert.throws(
+    () => service.submitQueryCaptcha(challenge.challengeId, "1234", "outro-vendedor"),
+    (error) => error.code === "QUERY_CHALLENGE_INVALID",
+  );
+  const result = await service.submitQueryCaptcha(
+    challenge.challengeId,
+    "1234",
+    "vendedor1",
+  );
+  assert.equal(result.connectionId, "piaui-primary");
+  assert.deepEqual(service.history().map(({ status }) => status), ["success"]);
   await service.close();
 });
 

@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#071b31" />
     <title>SCAGI · Central de Averbadoras</title>
-    <link rel="stylesheet" href="/styles.css?v=3" />
-    <script src="/app.js?v=3" type="module"></script>
+    <link rel="stylesheet" href="/styles.css?v=5" />
+    <script src="/app.js?v=4" type="module"></script>
   </head>
   <body>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
@@ -24,7 +24,7 @@
             <p>Consulte margens consignáveis com segurança e ganhe tempo em cada atendimento.</p>
           </div>
           <div class="story-stats">
-            <div><strong>02</strong><span>acessos integrados</span></div>
+            <div><strong>04</strong><span>acessos integrados</span></div>
             <div><strong>100%</strong><span>consulta centralizada</span></div>
           </div>
         </div>
@@ -124,7 +124,7 @@
             <div>
               <span class="eyebrow eyebrow-blue">CONSULTA CENTRALIZADA</span>
               <h2>Consultar margem</h2>
-              <p>Selecione o portal e informe o CPF do cliente.</p>
+              <p>Selecione o portal e informe os dados do cliente.</p>
             </div>
             <div class="portal-actions">
               <div id="portal-pill" class="portal-pill"><span></span> Verificando portal…</div>
@@ -146,8 +146,19 @@
                   <select id="portal-select" required>
                     <option value="portal-consignado">São Paulo e PMESP · Portal do Consignado</option>
                     <option value="prefeitura-sao-paulo">Prefeitura de São Paulo · Portal do Consignado</option>
+                    <option value="piaui">Governo do Piauí · ConsigFácil</option>
                   </select>
-                  <span class="flag-sp" aria-hidden="true">SP</span>
+                  <span id="portal-flag" class="government-flag flag-sp" aria-hidden="true">SP</span>
+                </span>
+              </label>
+              <label id="registration-field" class="field" hidden>
+                <span class="field-label-actions">
+                  <span>Matrícula do servidor</span>
+                  <a class="field-help-link" href="https://transparencia.pi.gov.br/servidores" target="_blank" rel="noopener noreferrer">Buscar matrícula ↗</a>
+                </span>
+                <span class="input-wrap input-large">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h1M8 13h1M12 9h4M12 13h4" /></svg>
+                  <input id="registration-input" inputmode="numeric" maxlength="31" autocomplete="off" placeholder="Ex.: 214860-9" />
                 </span>
               </label>
               <label class="field">
@@ -222,8 +233,14 @@
               <div class="integration-info"><h3>Prefeitura de São Paulo</h3><p>Município de São Paulo · Portal do Consignado</p><span class="inline-status" data-integration-status="prefeitura-sao-paulo-primary">Carregando…</span></div>
               <button class="button button-primary connect-button" data-connect-portal="prefeitura-sao-paulo-primary" type="button">Conectar acesso</button>
             </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo do Piauí</strong><span>Acesso estadual independente</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-piaui">PI</div>
+              <div class="integration-info"><h3>Governo do Piauí</h3><p>ConsigFácil · SEAD Piauí</p><span class="inline-status" data-integration-status="piaui-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="piaui-primary" type="button">Conectar acesso</button>
+            </div>
           </div>
-          <div class="info-card"><strong>Por que existe um CAPTCHA?</strong><p>O portal exige confirmação humana no login. O SCAGI preenche as credenciais guardadas no servidor e solicita apenas a leitura do CAPTCHA, sem expor a senha aos vendedores.</p></div>
+          <div class="info-card"><strong>Por que existe um CAPTCHA?</strong><p>Os portais exigem confirmação humana. O SCAGI mantém as credenciais no servidor e solicita apenas a leitura da imagem. No ConsigFácil do Piauí, há uma confirmação no login e outra em cada consulta.</p></div>
         </section>
 
         <section id="view-history" class="view" hidden>
@@ -271,6 +288,17 @@
         <p>Defina uma nova senha para <strong id="password-user-name">o vendedor</strong>. As sessões atuais desse usuário serão encerradas.</p>
         <label class="field"><span>Nova senha</span><span class="input-wrap"><input id="reset-user-password" type="password" minlength="8" autocomplete="new-password" required placeholder="Mínimo de 8 caracteres" /></span></label>
         <div class="dialog-actions"><button id="cancel-user-password" class="button button-secondary" type="button">Cancelar</button><button class="button button-primary" type="submit">Salvar nova senha</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="query-captcha-dialog" class="dialog">
+      <form id="query-captcha-form" method="dialog">
+        <div class="dialog-head"><div><span class="eyebrow eyebrow-blue">GOVERNO DO PIAUÍ · CONSIGFÁCIL</span><h2>Confirmar consulta</h2></div><button id="close-query-captcha" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
+        <p>A matrícula e o CPF já foram preenchidos. Digite os caracteres da imagem para concluir a pesquisa.</p>
+        <div class="captcha-image-wrap"><img id="query-captcha-image" alt="CAPTCHA da consulta no ConsigFácil" /></div>
+        <label class="field"><span>Texto do CAPTCHA</span><span class="input-wrap"><input id="query-captcha-input" autocomplete="off" required placeholder="Digite os caracteres" /></span></label>
+        <div id="query-captcha-error" class="form-error" role="alert" hidden></div>
+        <div class="dialog-actions"><button id="cancel-query-captcha" class="button button-secondary" type="button">Cancelar</button><button class="button button-primary" type="submit">Concluir consulta</button></div>
       </form>
     </dialog>
   </body>

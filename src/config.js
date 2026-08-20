@@ -37,6 +37,7 @@ export const config = {
   portals: [
     {
       id: "gov-sp-primary",
+      adapter: "portal-do-consignado",
       queryPortalId: "portal-consignado",
       name: "Gov SP · Acesso 1",
       governments: ["São Paulo", "PMESP"],
@@ -51,6 +52,7 @@ export const config = {
     },
     {
       id: "gov-sp-secondary",
+      adapter: "portal-do-consignado",
       queryPortalId: "portal-consignado",
       name: "Gov SP · Acesso 2",
       governments: ["São Paulo", "PMESP"],
@@ -65,6 +67,7 @@ export const config = {
     },
     {
       id: "prefeitura-sao-paulo-primary",
+      adapter: "portal-do-consignado",
       queryPortalId: "prefeitura-sao-paulo",
       name: "Prefeitura de São Paulo",
       governments: ["Prefeitura de São Paulo"],
@@ -74,6 +77,22 @@ export const config = {
       password: process.env.PORTAL_PREFEITURA_SP_PASSWORD || "",
       usernameVariable: "PORTAL_PREFEITURA_SP_USERNAME",
       passwordVariable: "PORTAL_PREFEITURA_SP_PASSWORD",
+      browserChannel: process.env.PORTAL_BROWSER_CHANNEL || "",
+      headless: readBoolean(process.env.PLAYWRIGHT_HEADLESS, true),
+    },
+    {
+      id: "piaui-primary",
+      adapter: "consigfacil-piaui",
+      queryPortalId: "piaui",
+      name: "Governo do Piauí",
+      governments: ["Piauí"],
+      queryFields: ["registration"],
+      mockAgency: "GOVERNO DO ESTADO DO PIAUÍ",
+      baseUrl: "https://consigfacil.sead.pi.gov.br",
+      username: process.env.PORTAL_PIAUI_USERNAME || "",
+      password: process.env.PORTAL_PIAUI_PASSWORD || "",
+      usernameVariable: "PORTAL_PIAUI_USERNAME",
+      passwordVariable: "PORTAL_PIAUI_PASSWORD",
       browserChannel: process.env.PORTAL_BROWSER_CHANNEL || "",
       headless: readBoolean(process.env.PLAYWRIGHT_HEADLESS, true),
     },

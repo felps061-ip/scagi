@@ -7,6 +7,7 @@ import { config, validateConfig } from "./config.js";
 import { isValidCpf, normalizeCpf } from "./cpf.js";
 import { createPortalService } from "./portal-service.js";
 import { PortalError } from "./portals/errors.js";
+import { normalizeRegistration } from "./registration.js";
 import {
   createSessionStore,
   expiredSessionCookie,
@@ -224,10 +225,44 @@ const server = createServer(async (request, response) => {
             error: { code: "INVALID_CPF", message: "Informe um CPF válido." },
           });
         }
+        const requirements = portals.requirements(body.portal);
+        const registration = normalizeRegistration(body.registration);
+        if (requirements.fields.includes("registration") && !registration) {
+          return json(response, 400, {
+            error: { code: "REGISTRATION_REQUIRED", message: "Informe a matrícula do servidor." },
+          });
+        }
         return json(
           response,
           200,
-          await portals.query(body.portal, cpf, authentication.session.username),
+          await portals.query(
+            body.portal,
+            cpf,
+            authentication.session.username,
+            { registration },
+          ),
+        );
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/margins/query/captcha") {
+        const body = await readJson(request);
+        return json(
+          response,
+          200,
+          await portals.submitQueryCaptcha(
+            body.challengeId,
+            body.captcha,
+            authentication.session.username,
+          ),
+        );
+      }
+
+      if (request.method === "POST" && url.pathname === "/api/margins/query/cancel") {
+        const body = await readJson(request);
+        return json(
+          response,
+          200,
+          portals.cancelQueryCaptcha(body.challengeId, authentication.session.username),
         );
       }
 
@@ -253,7 +288,7 @@ const server = createServer(async (request, response) => {
 
 server.listen(config.port, config.host, () => {
   console.log(`SCAGI disponível em http://${config.host}:${config.port}`);
-  console.log(`Modo do Portal do Consignado: ${config.portalMode}`);
+  console.log(`Modo das integrações: ${config.portalMode}`);
   if (!config.isProduction && !process.env.APP_PASSWORD && !process.env.APP_USERS_JSON) {
     console.log("Acesso de desenvolvimento: admin / scagi-demo");
   }

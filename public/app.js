@@ -3,6 +3,7 @@ const state = {
   portal: null,
   portals: new Map(),
   activePortalId: null,
+  activeQueryChallengeId: null,
   activeUsername: null,
   portalMode: "mock",
 };
@@ -70,7 +71,20 @@ function selectedConnections() {
   );
 }
 
+function updateQueryFields() {
+  const isPiaui = $("#portal-select").value === "piaui";
+  const registrationField = $("#registration-field");
+  const registrationInput = $("#registration-input");
+  registrationField.hidden = !isPiaui;
+  registrationInput.required = isPiaui;
+  $(".query-grid").classList.toggle("with-registration", isPiaui);
+  const flag = $("#portal-flag");
+  flag.textContent = isPiaui ? "PI" : "SP";
+  flag.className = `government-flag ${isPiaui ? "flag-pi" : "flag-sp"}`;
+}
+
 function renderSelectedPortal() {
+  updateQueryFields();
   const connections = selectedConnections();
   const connected = connections.filter((portal) => portal.state === "connected");
   const connectionToOpen = connections.find((portal) => portal.state !== "connected") || connections[0];
@@ -284,9 +298,24 @@ $("#query-form").addEventListener("submit", async (event) => {
   try {
     const result = await api("/api/margins/query", {
       method: "POST",
-      body: JSON.stringify({ portal: $("#portal-select").value, cpf: $("#cpf-input").value }),
+      body: JSON.stringify({
+        portal: $("#portal-select").value,
+        cpf: $("#cpf-input").value,
+        registration: $("#registration-input").value,
+      }),
     });
-    renderResult(result);
+    if (result.requiresCaptcha && result.challengeId) {
+      state.activeQueryChallengeId = result.challengeId;
+      $("#query-captcha-image").src = result.captchaImage;
+      $("#query-captcha-input").value = "";
+      $("#query-captcha-error").hidden = true;
+      $("#loading-result").hidden = true;
+      $("#empty-result").hidden = false;
+      $("#query-captcha-dialog").showModal();
+      $("#query-captcha-input").focus();
+    } else {
+      renderResult(result);
+    }
   } catch (error) {
     $("#loading-result").hidden = true;
     $("#empty-result").hidden = false;
@@ -299,6 +328,7 @@ $("#query-form").addEventListener("submit", async (event) => {
 
 $("#new-query-button").addEventListener("click", () => {
   $("#cpf-input").value = "";
+  $("#registration-input").value = "";
   $("#result-card").hidden = true;
   $("#empty-result").hidden = false;
   $("#cpf-input").focus();
@@ -395,6 +425,65 @@ $("#captcha-form").addEventListener("submit", async (event) => {
     if (error.details?.captchaImage) $("#captcha-image").src = error.details.captchaImage;
   } finally {
     button.disabled = false;
+  }
+});
+
+async function cancelActiveQueryChallenge() {
+  const challengeId = state.activeQueryChallengeId;
+  state.activeQueryChallengeId = null;
+  if ($("#query-captcha-dialog").open) $("#query-captcha-dialog").close();
+  $("#loading-result").hidden = true;
+  $("#empty-result").hidden = false;
+  if (challengeId) {
+    await api("/api/margins/query/cancel", {
+      method: "POST",
+      body: JSON.stringify({ challengeId }),
+    }).catch(() => {});
+  }
+}
+
+$("#close-query-captcha").addEventListener("click", cancelActiveQueryChallenge);
+$("#cancel-query-captcha").addEventListener("click", cancelActiveQueryChallenge);
+$("#query-captcha-dialog").addEventListener("close", () => {
+  if (state.activeQueryChallengeId) cancelActiveQueryChallenge();
+});
+$("#query-captcha-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  $("#query-captcha-error").hidden = true;
+  $("#empty-result").hidden = true;
+  $("#loading-result").hidden = false;
+  try {
+    const result = await api("/api/margins/query/captcha", {
+      method: "POST",
+      body: JSON.stringify({
+        challengeId: state.activeQueryChallengeId,
+        captcha: $("#query-captcha-input").value,
+      }),
+    });
+    state.activeQueryChallengeId = null;
+    $("#query-captcha-dialog").close();
+    renderResult(result);
+    showToast("Consulta do Piauí concluída com sucesso.", "success");
+  } catch (error) {
+    $("#loading-result").hidden = true;
+    $("#empty-result").hidden = false;
+    $("#query-captcha-error").textContent = error.message;
+    $("#query-captcha-error").hidden = false;
+    if (error.details?.captchaImage) {
+      $("#query-captcha-image").src = error.details.captchaImage;
+      $("#query-captcha-input").value = "";
+      $("#query-captcha-input").focus();
+    }
+    if (error.code === "QUERY_CHALLENGE_INVALID") {
+      state.activeQueryChallengeId = null;
+      $("#query-captcha-dialog").close();
+      showToast(error.message);
+    }
+  } finally {
+    button.disabled = false;
+    await loadPortals();
   }
 });
 

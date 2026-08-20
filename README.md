@@ -1,6 +1,6 @@
 # SCAGI
 
-MVP do **Sistema Centralizado de Averbadoras do Grupo Império**. O Portal do Consignado possui um pool de acessos para Estado de São Paulo/PMESP e uma sessão isolada para Prefeitura de São Paulo.
+MVP do **Sistema Centralizado de Averbadoras do Grupo Império**. O Portal do Consignado possui um pool de acessos para Estado de São Paulo/PMESP e uma sessão isolada para Prefeitura de São Paulo. O ConsigFácil atende o Governo do Piauí em outra sessão independente.
 
 ## O que já está implementado
 
@@ -8,9 +8,10 @@ MVP do **Sistema Centralizado de Averbadoras do Grupo Império**. O Portal do Co
 - múltiplos usuários com perfis de administrador e vendedor;
 - conexões dos portais compartilhadas no servidor entre todos os vendedores;
 - seleção da averbadora e entrada de CPF com validação;
+- consulta do Governo do Piauí por matrícula e CPF, removendo automaticamente hífen e pontuação da matrícula;
 - modo de demonstração sem acesso a dados reais;
 - integração real via navegador controlado pelo backend;
-- CAPTCHA com resolução humana, sem automação ou contorno;
+- CAPTCHA com resolução humana, sem automação ou contorno, inclusive na consulta do Piauí;
 - extração do painel **Margem Disponível - Total / Provimento 1**;
 - sessão e fila independentes para cada acesso do portal;
 - rodízio automático das consultas Gov SP entre os acessos estaduais conectados;
@@ -39,14 +40,14 @@ O administrador pode abrir **Vendedores** no menu para criar logins, redefinir s
 
 Para testar uma consulta, use um CPF matematicamente válido, por exemplo `529.982.247-25`. Nenhum dado desse CPF é enviado a um portal enquanto `PORTAL_MODE=mock`.
 
-## Ativar o Portal do Consignado
+## Ativar os portais reais
 
 1. Copie `.env.example` para `.env`.
 2. Defina uma senha forte para o SCAGI e uma chave aleatória com pelo menos 32 caracteres.
-3. Defina `PORTAL_MODE=real` e preencha as credenciais dos dois acessos estaduais e do acesso municipal.
+3. Defina `PORTAL_MODE=real` e preencha as credenciais dos dois acessos estaduais de São Paulo, do acesso municipal e do Governo do Piauí.
 4. Instale as dependências: `npm install`.
 5. Mantenha `PORTAL_BROWSER_CHANNEL=chrome` se o Google Chrome estiver instalado. Para usar o Chromium do Playwright, deixe a variável vazia e execute `npx playwright install chromium`.
-6. Inicie com `npm start`, entre no SCAGI, abra **Integrações** e conclua o CAPTCHA.
+6. Inicie com `npm start`, entre no SCAGI, abra **Integrações** e conclua o CAPTCHA de cada acesso. O ConsigFácil solicitará um novo CAPTCHA quando uma consulta for preparada.
 
 O arquivo `.env` é ignorado pelo Git. Não coloque credenciais em arquivos versionados nem no código-fonte.
 
@@ -58,6 +59,6 @@ npm test
 
 ## Arquitetura do primeiro MVP
 
-O servidor Node entrega a interface, autentica o operador e mantém uma sessão de navegador isolada para cada credencial. Cada acesso possui sua própria fila porque a página do Portal do Consignado é stateful e usa Apache Wicket. Para Gov SP, o serviço escolhe os acessos conectados em round-robin; se somente um estiver conectado, ele recebe todas as consultas. O adaptador evita IDs temporários gerados pelo Wicket e usa seletores estáveis como `#cpfServidor`, o nome do botão de pesquisa e o escopo `#painelMargensDisponiveis`.
+O servidor Node entrega a interface, autentica o operador e mantém uma sessão de navegador isolada para cada credencial. Cada acesso possui sua própria fila porque os portais são stateful. Para Gov SP, o serviço escolhe os acessos conectados em round-robin; se somente um estiver conectado, ele recebe todas as consultas. O adaptador paulista evita IDs temporários gerados pelo Apache Wicket e usa seletores estáveis como `#cpfServidor` e `#painelMargensDisponiveis`. O adaptador do Piauí mantém matrícula, CPF e CAPTCHA da pesquisa na mesma sessão e extrai os cartões **Margem Consignável** e **Margem Cartão**.
 
 O histórico e as sessões do SCAGI ainda ficam em memória. Antes de uso com múltiplos operadores em produção, o próximo passo é adicionar banco de dados, perfis/permissões, criptografia de credenciais em repouso, logs de auditoria duráveis, HTTPS e uma política de retenção compatível com a LGPD.
