@@ -12,6 +12,12 @@ export function credentialsMatch(inputUser, inputPassword, expectedUser, expecte
   return safeEqual(inputUser, expectedUser) && safeEqual(inputPassword, expectedPassword);
 }
 
+export function findUserByCredentials(users, username, password) {
+  return users.find((user) => (
+    credentialsMatch(username, password, user.username, user.password)
+  )) || null;
+}
+
 export function createSessionStore(secret) {
   const sessions = new Map();
 
@@ -19,9 +25,12 @@ export function createSessionStore(secret) {
     return createHmac("sha256", secret).update(id).digest("base64url");
   }
 
-  function create(username) {
+  function create(user) {
     const id = randomBytes(32).toString("base64url");
-    sessions.set(id, { username, expiresAt: Date.now() + SESSION_TTL_MS });
+    const identity = typeof user === "string"
+      ? { username: user, role: "operator" }
+      : { username: user.username, role: user.role };
+    sessions.set(id, { ...identity, expiresAt: Date.now() + SESSION_TTL_MS });
     return `${id}.${signature(id)}`;
   }
 

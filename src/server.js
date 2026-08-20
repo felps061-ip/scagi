@@ -9,7 +9,7 @@ import { createPortalService } from "./portal-service.js";
 import { PortalError } from "./portals/errors.js";
 import {
   createSessionStore,
-  credentialsMatch,
+  findUserByCredentials,
   expiredSessionCookie,
   parseCookies,
   sessionCookie,
@@ -115,23 +115,24 @@ const server = createServer(async (request, response) => {
       const { session } = authSession(request);
       return json(response, 200, {
         authenticated: Boolean(session),
-        user: session ? { username: session.username } : null,
+        user: session ? { username: session.username, role: session.role } : null,
         portalMode: config.portalMode,
       });
     }
 
     if (request.method === "POST" && url.pathname === "/api/auth/login") {
       const body = await readJson(request);
-      if (!credentialsMatch(body.username, body.password, config.appUser, config.appPassword)) {
+      const user = findUserByCredentials(config.users, body.username, body.password);
+      if (!user) {
         return json(response, 401, {
           error: { code: "INVALID_CREDENTIALS", message: "Usuário ou senha inválidos." },
         });
       }
-      const token = sessions.create(config.appUser);
+      const token = sessions.create(user);
       return json(
         response,
         200,
-        { authenticated: true, user: { username: config.appUser } },
+        { authenticated: true, user: { username: user.username, role: user.role } },
         { "Set-Cookie": sessionCookie(token, config.isProduction) },
       );
     }
@@ -160,6 +161,11 @@ const server = createServer(async (request, response) => {
         /^\/api\/portals\/([a-z0-9-]+)\/(connect|captcha)$/,
       );
       if (request.method === "POST" && portalAction) {
+        if (authentication.session.role !== "admin") {
+          return json(response, 403, {
+            error: { code: "FORBIDDEN", message: "Somente administradores podem conectar portais." },
+          });
+        }
         const [, portalId, action] = portalAction;
         if (action === "connect") {
           return json(response, 200, await portals.prepareLogin(portalId));
@@ -211,7 +217,7 @@ const server = createServer(async (request, response) => {
 server.listen(config.port, config.host, () => {
   console.log(`SCAGI disponível em http://${config.host}:${config.port}`);
   console.log(`Modo do Portal do Consignado: ${config.portalMode}`);
-  if (!config.isProduction && !process.env.APP_PASSWORD) {
+  if (!config.isProduction && !process.env.APP_PASSWORD && !process.env.APP_USERS_JSON) {
     console.log("Acesso de desenvolvimento: admin / scagi-demo");
   }
 });

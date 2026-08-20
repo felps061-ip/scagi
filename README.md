@@ -5,6 +5,8 @@ MVP do **Sistema Centralizado de Averbadoras do Grupo Império**. O Portal do Co
 ## O que já está implementado
 
 - login próprio do SCAGI, com sessão HTTP-only;
+- múltiplos usuários com perfis de administrador e vendedor;
+- conexões dos portais compartilhadas no servidor entre todos os vendedores;
 - seleção da averbadora e entrada de CPF com validação;
 - modo de demonstração sem acesso a dados reais;
 - integração real via navegador controlado pelo backend;
@@ -24,6 +26,14 @@ npm start
 ```
 
 Acesse `http://127.0.0.1:3000`. Sem arquivo `.env`, o acesso de desenvolvimento é `admin` / `scagi-demo` e o Portal do Consignado usa dados simulados.
+
+Para cadastrar vários usuários, defina `APP_USERS_JSON` no `.env`. Administradores podem conectar e reconectar os portais; operadores usam as conexões globais já abertas e realizam consultas:
+
+```env
+APP_USERS_JSON=[{"username":"admin","password":"senha-forte-admin","role":"admin"},{"username":"vendedor1","password":"senha-forte-vendedor","role":"operator"}]
+```
+
+As sessões dos portais pertencem ao processo do servidor SCAGI, não ao login individual. Assim, quando um administrador conecta um portal, todos os vendedores autenticados nesse mesmo servidor passam a enxergá-lo conectado.
 
 Para testar uma consulta, use um CPF matematicamente válido, por exemplo `529.982.247-25`. Nenhum dado desse CPF é enviado a um portal enquanto `PORTAL_MODE=mock`.
 

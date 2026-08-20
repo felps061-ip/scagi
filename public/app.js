@@ -43,7 +43,10 @@ function showLogin() {
 function showApp() {
   $("#login-view").hidden = true;
   $("#app-view").hidden = false;
-  $("#current-user").textContent = state.user?.username || "Operador";
+  const username = state.user?.username || "Operador";
+  $("#current-user").textContent = username;
+  $("#current-user-role").textContent = state.user?.role === "admin" ? "Administrador" : "Vendedor";
+  $("#current-user-avatar").textContent = username.slice(0, 2).toUpperCase();
   loadPortals();
 }
 
@@ -85,7 +88,7 @@ function renderSelectedPortal() {
     ? `${connected.length}/${connections.length} acessos conectados`
     : formatStatus(connections[0]);
   pill.innerHTML = `<span></span> ${escapeHtml(statusLabel)}`;
-  connectButton.hidden = false;
+  connectButton.hidden = state.user?.role !== "admin";
   connectButton.dataset.connectPortal = connectionToOpen.id;
   connectButton.textContent = connected.length === connections.length && connectionToOpen.mode === "real"
     ? "Reconectar acesso"
@@ -101,6 +104,7 @@ function renderPortal(portal) {
   }
   const connectButtons = $$(`[data-connect-portal="${portal.id}"]`);
   connectButtons.forEach((connectButton) => {
+    connectButton.hidden = state.user?.role !== "admin";
     connectButton.textContent = portal.state === "connected" && portal.mode === "real"
       ? "Reconectar acesso"
       : "Conectar acesso";

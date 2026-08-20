@@ -8,12 +8,28 @@ function readBoolean(value, fallback) {
   return value.toLowerCase() === "true";
 }
 
+export function parseAppUsers(raw, fallbackUser, fallbackPassword) {
+  if (!raw) {
+    return [{ username: fallbackUser, password: fallbackPassword, role: "admin" }];
+  }
+
+  const users = JSON.parse(raw);
+  if (!Array.isArray(users)) throw new Error("APP_USERS_JSON precisa ser uma lista JSON.");
+  return users.map((user) => ({
+    username: String(user?.username || "").trim(),
+    password: String(user?.password || ""),
+    role: user?.role === "admin" ? "admin" : "operator",
+  }));
+}
+
+const fallbackAppUser = process.env.APP_USER || "admin";
+const fallbackAppPassword = process.env.APP_PASSWORD || (isProduction ? "" : "scagi-demo");
+
 export const config = {
   host: process.env.HOST || "127.0.0.1",
   port: Number(process.env.PORT || 3000),
   isProduction,
-  appUser: process.env.APP_USER || "admin",
-  appPassword: process.env.APP_PASSWORD || (isProduction ? "" : "scagi-demo"),
+  users: parseAppUsers(process.env.APP_USERS_JSON, fallbackAppUser, fallbackAppPassword),
   sessionSecret:
     process.env.SESSION_SECRET ||
     (isProduction ? "" : randomBytes(32).toString("hex")),
@@ -71,8 +87,20 @@ export function validateConfig() {
     errors.push("PORT precisa ser uma porta TCP válida.");
   }
 
-  if (!config.appPassword) {
-    errors.push("APP_PASSWORD é obrigatório em produção.");
+  if (!config.users.length) {
+    errors.push("Configure pelo menos um usuário do SCAGI.");
+  }
+
+  if (!config.users.some(({ role }) => role === "admin")) {
+    errors.push("Configure pelo menos um usuário administrador do SCAGI.");
+  }
+
+  const usernames = new Set();
+  for (const user of config.users) {
+    if (!user.username) errors.push("Todo usuário do SCAGI precisa de um nome.");
+    if (!user.password) errors.push(`A senha de ${user.username || "um usuário"} é obrigatória.`);
+    if (usernames.has(user.username)) errors.push(`O usuário ${user.username} está duplicado.`);
+    usernames.add(user.username);
   }
 
   if (!config.sessionSecret || config.sessionSecret.length < 32) {
