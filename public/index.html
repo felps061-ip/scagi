@@ -90,6 +90,10 @@
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5M12 7v5l3 2" /></svg>
             <span>Histórico</span>
           </button>
+          <button id="users-nav-item" class="nav-item" data-view="users" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M16 11h6" /></svg>
+            <span>Vendedores</span>
+          </button>
         </nav>
         <div class="sidebar-footer">
           <div class="secure-card">
@@ -231,6 +235,22 @@
             </table>
           </div>
         </section>
+
+        <section id="view-users" class="view" hidden>
+          <div class="page-heading"><div><span class="eyebrow eyebrow-blue">ADMINISTRAÇÃO</span><h2>Vendedores</h2><p>Crie e gerencie os acessos individuais da equipe.</p></div></div>
+          <form id="create-user-form" class="user-create-card">
+            <div><h3>Novo vendedor</h3><p>O vendedor poderá consultar margens e conectar os portais compartilhados.</p></div>
+            <label class="field"><span>Nome de usuário</span><span class="input-wrap"><input id="new-user-username" minlength="3" maxlength="40" autocomplete="off" required placeholder="ex.: maria.silva" /></span></label>
+            <label class="field"><span>Senha inicial</span><span class="input-wrap"><input id="new-user-password" type="password" minlength="8" autocomplete="new-password" required placeholder="Mínimo de 8 caracteres" /></span></label>
+            <button class="button button-primary" type="submit">Criar vendedor</button>
+          </form>
+          <div class="history-card users-card">
+            <table>
+              <thead><tr><th>Usuário</th><th>Perfil</th><th>Criado em</th><th>Ações</th></tr></thead>
+              <tbody id="users-body"><tr><td colspan="4" class="empty-table">Carregando usuários…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -242,6 +262,15 @@
         <label class="field"><span>Texto do CAPTCHA</span><span class="input-wrap"><input id="captcha-input" autocomplete="off" required placeholder="Digite os caracteres" /></span></label>
         <div id="captcha-error" class="form-error" role="alert" hidden></div>
         <div class="dialog-actions"><button id="refresh-captcha" class="button button-secondary" type="button">Gerar outra imagem</button><button class="button button-primary" type="submit">Concluir conexão</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="user-password-dialog" class="dialog">
+      <form id="user-password-form" method="dialog">
+        <div class="dialog-head"><div><span class="eyebrow eyebrow-blue">SEGURANÇA</span><h2>Redefinir senha</h2></div><button id="close-user-password-dialog" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
+        <p>Defina uma nova senha para <strong id="password-user-name">o vendedor</strong>. As sessões atuais desse usuário serão encerradas.</p>
+        <label class="field"><span>Nova senha</span><span class="input-wrap"><input id="reset-user-password" type="password" minlength="8" autocomplete="new-password" required placeholder="Mínimo de 8 caracteres" /></span></label>
+        <div class="dialog-actions"><button id="cancel-user-password" class="button button-secondary" type="button">Cancelar</button><button class="button button-primary" type="submit">Salvar nova senha</button></div>
       </form>
     </dialog>
   </body>

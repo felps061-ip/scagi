@@ -57,7 +57,13 @@ export function createSessionStore(secret) {
     if (id) sessions.delete(id);
   }
 
-  return { create, read, destroy };
+  function destroyByUsername(username) {
+    for (const [id, session] of sessions) {
+      if (session.username === username) sessions.delete(id);
+    }
+  }
+
+  return { create, read, destroy, destroyByUsername };
 }
 
 export function parseCookies(cookieHeader = "") {

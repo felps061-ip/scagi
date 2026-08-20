@@ -33,7 +33,9 @@ Para cadastrar vários usuários, defina `APP_USERS_JSON` no `.env`. Todos os us
 APP_USERS_JSON=[{"username":"admin","password":"senha-forte-admin","role":"admin"},{"username":"vendedor1","password":"senha-forte-vendedor","role":"operator"}]
 ```
 
-As sessões dos portais pertencem ao processo do servidor SCAGI, não ao login individual. Assim, quando um administrador conecta um portal, todos os vendedores autenticados nesse mesmo servidor passam a enxergá-lo conectado.
+As sessões dos portais pertencem ao processo do servidor SCAGI, não ao login individual. Assim, quando qualquer usuário conecta um portal, todos os vendedores autenticados nesse mesmo servidor passam a enxergá-lo conectado.
+
+O administrador pode abrir **Vendedores** no menu para criar logins, redefinir senhas e remover acessos. As senhas são derivadas com `scrypt` e persistidas somente como hash em `.data/users.json`, arquivo ignorado pelo Git. Redefinir uma senha ou remover um vendedor encerra as sessões atuais desse usuário.
 
 Para testar uma consulta, use um CPF matematicamente válido, por exemplo `529.982.247-25`. Nenhum dado desse CPF é enviado a um portal enquanto `PORTAL_MODE=mock`.
 

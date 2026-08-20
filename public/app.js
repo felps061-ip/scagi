@@ -3,6 +3,7 @@ const state = {
   portal: null,
   portals: new Map(),
   activePortalId: null,
+  activeUsername: null,
   portalMode: "mock",
 };
 
@@ -47,6 +48,7 @@ function showApp() {
   $("#current-user").textContent = username;
   $("#current-user-role").textContent = state.user?.role === "admin" ? "Administrador" : "Vendedor";
   $("#current-user-avatar").textContent = username.slice(0, 2).toUpperCase();
+  $("#users-nav-item").hidden = state.user?.role !== "admin";
   loadPortals();
 }
 
@@ -123,15 +125,17 @@ async function loadPortals() {
 }
 
 function switchView(name) {
+  if (name === "users" && state.user?.role !== "admin") name = "query";
   $$(".view").forEach((view) => {
     view.hidden = view.id !== `view-${name}`;
   });
   $$(".nav-item[data-view]").forEach((item) => item.classList.toggle("active", item.dataset.view === name));
-  const labels = { query: "Consultar margem", integrations: "Integrações", history: "Histórico" };
+  const labels = { query: "Consultar margem", integrations: "Integrações", history: "Histórico", users: "Vendedores" };
   $("#breadcrumb-current").textContent = labels[name];
   $(".sidebar").classList.remove("open");
   if (name === "history") loadHistory();
   if (name === "integrations") loadPortals();
+  if (name === "users") loadUsers();
 }
 
 function formatCpfInput(value) {
@@ -174,6 +178,23 @@ async function loadHistory() {
           <td><span class="history-status ${item.status}">${item.status === "success" ? "Sucesso" : "Falha"}</span></td>
         </tr>`).join("")
       : '<tr><td colspan="5" class="empty-table">Nenhuma consulta realizada.</td></tr>';
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function loadUsers() {
+  try {
+    const { users } = await api("/api/users");
+    $("#users-body").innerHTML = users.map((user) => `<tr>
+      <td><strong>${escapeHtml(user.username)}</strong></td>
+      <td><span class="user-role">${user.role === "admin" ? "Administrador" : "Vendedor"}</span></td>
+      <td>${escapeHtml(new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(user.createdAt)))}</td>
+      <td><div class="user-actions">
+        <button class="button button-secondary" data-reset-user="${user.username}" type="button">Redefinir senha</button>
+        ${user.role === "admin" ? "" : `<button class="button button-danger" data-remove-user="${user.username}" type="button">Remover</button>`}
+      </div></td>
+    </tr>`).join("");
   } catch (error) {
     showToast(error.message);
   }
@@ -282,6 +303,74 @@ $("#new-query-button").addEventListener("click", () => {
   $("#empty-result").hidden = false;
   $("#cpf-input").focus();
 });
+
+$("#create-user-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  try {
+    await api("/api/users", {
+      method: "POST",
+      body: JSON.stringify({
+        username: $("#new-user-username").value,
+        password: $("#new-user-password").value,
+      }),
+    });
+    event.currentTarget.reset();
+    await loadUsers();
+    showToast("Vendedor criado com sucesso.", "success");
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#users-body").addEventListener("click", async (event) => {
+  const resetButton = event.target.closest("[data-reset-user]");
+  if (resetButton) {
+    state.activeUsername = resetButton.dataset.resetUser;
+    $("#password-user-name").textContent = state.activeUsername;
+    $("#reset-user-password").value = "";
+    $("#user-password-dialog").showModal();
+    return;
+  }
+
+  const removeButton = event.target.closest("[data-remove-user]");
+  if (!removeButton) return;
+  const username = removeButton.dataset.removeUser;
+  if (!window.confirm(`Remover o acesso de ${username}?`)) return;
+  removeButton.disabled = true;
+  try {
+    await api(`/api/users/${username}`, { method: "DELETE" });
+    await loadUsers();
+    showToast("Acesso removido com sucesso.", "success");
+  } catch (error) {
+    removeButton.disabled = false;
+    showToast(error.message);
+  }
+});
+
+$("#user-password-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  try {
+    await api(`/api/users/${state.activeUsername}/password`, {
+      method: "PATCH",
+      body: JSON.stringify({ password: $("#reset-user-password").value }),
+    });
+    $("#user-password-dialog").close();
+    showToast("Senha redefinida. As sessões anteriores foram encerradas.", "success");
+  } catch (error) {
+    showToast(error.message);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("#close-user-password-dialog").addEventListener("click", () => $("#user-password-dialog").close());
+$("#cancel-user-password").addEventListener("click", () => $("#user-password-dialog").close());
 
 $("#close-dialog").addEventListener("click", () => $("#captcha-dialog").close());
 $("#refresh-captcha").addEventListener("click", () => startConnection(state.activePortalId));

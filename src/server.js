@@ -1,7 +1,7 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
-import { dirname, extname, join, normalize } from "node:path";
+import { dirname, extname, isAbsolute, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config, validateConfig } from "./config.js";
 import { isValidCpf, normalizeCpf } from "./cpf.js";
@@ -9,16 +9,23 @@ import { createPortalService } from "./portal-service.js";
 import { PortalError } from "./portals/errors.js";
 import {
   createSessionStore,
-  findUserByCredentials,
   expiredSessionCookie,
   parseCookies,
   sessionCookie,
 } from "./security.js";
+import { createUserStore } from "./user-store.js";
 
 validateConfig();
 
 const rootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const publicDir = join(rootDir, "public");
+const configuredUserStorePath = process.env.USER_STORE_PATH || join(".data", "users.json");
+const userStore = createUserStore({
+  filePath: isAbsolute(configuredUserStorePath)
+    ? configuredUserStorePath
+    : join(rootDir, configuredUserStorePath),
+  seedUsers: config.users,
+});
 const sessions = createSessionStore(config.sessionSecret);
 const portals = createPortalService(config);
 
@@ -122,7 +129,7 @@ const server = createServer(async (request, response) => {
 
     if (request.method === "POST" && url.pathname === "/api/auth/login") {
       const body = await readJson(request);
-      const user = findUserByCredentials(config.users, body.username, body.password);
+      const user = userStore.authenticate(body.username, body.password);
       if (!user) {
         return json(response, 401, {
           error: { code: "INVALID_CREDENTIALS", message: "Usuário ou senha inválidos." },
@@ -155,6 +162,41 @@ const server = createServer(async (request, response) => {
 
       if (request.method === "GET" && url.pathname === "/api/history") {
         return json(response, 200, { history: portals.history() });
+      }
+
+      if (url.pathname === "/api/users" || url.pathname.startsWith("/api/users/")) {
+        if (authentication.session.role !== "admin") {
+          return json(response, 403, {
+            error: { code: "FORBIDDEN", message: "Somente administradores podem gerenciar usuários." },
+          });
+        }
+
+        if (request.method === "GET" && url.pathname === "/api/users") {
+          return json(response, 200, { users: userStore.list() });
+        }
+
+        if (request.method === "POST" && url.pathname === "/api/users") {
+          const body = await readJson(request);
+          return json(response, 201, { user: userStore.createSeller(body.username, body.password) });
+        }
+
+        const userAction = url.pathname.match(/^\/api\/users\/([a-z0-9._-]+)(?:\/(password))?$/);
+        if (userAction && request.method === "PATCH" && userAction[2] === "password") {
+          const body = await readJson(request);
+          const user = userStore.resetPassword(userAction[1], body.password);
+          sessions.destroyByUsername(user.username);
+          return json(response, 200, { user });
+        }
+        if (userAction && request.method === "DELETE" && !userAction[2]) {
+          if (userAction[1] === authentication.session.username) {
+            return json(response, 409, {
+              error: { code: "CANNOT_DELETE_SELF", message: "Você não pode remover o próprio usuário." },
+            });
+          }
+          userStore.remove(userAction[1]);
+          sessions.destroyByUsername(userAction[1]);
+          return json(response, 200, { removed: true });
+        }
       }
 
       const portalAction = url.pathname.match(
