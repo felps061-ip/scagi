@@ -88,7 +88,7 @@ function renderSelectedPortal() {
     ? `${connected.length}/${connections.length} acessos conectados`
     : formatStatus(connections[0]);
   pill.innerHTML = `<span></span> ${escapeHtml(statusLabel)}`;
-  connectButton.hidden = state.user?.role !== "admin";
+  connectButton.hidden = false;
   connectButton.dataset.connectPortal = connectionToOpen.id;
   connectButton.textContent = connected.length === connections.length && connectionToOpen.mode === "real"
     ? "Reconectar acesso"
@@ -104,7 +104,7 @@ function renderPortal(portal) {
   }
   const connectButtons = $$(`[data-connect-portal="${portal.id}"]`);
   connectButtons.forEach((connectButton) => {
-    connectButton.hidden = state.user?.role !== "admin";
+    connectButton.hidden = false;
     connectButton.textContent = portal.state === "connected" && portal.mode === "real"
       ? "Reconectar acesso"
       : "Conectar acesso";

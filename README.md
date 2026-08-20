@@ -27,7 +27,7 @@ npm start
 
 Acesse `http://127.0.0.1:3000`. Sem arquivo `.env`, o acesso de desenvolvimento é `admin` / `scagi-demo` e o Portal do Consignado usa dados simulados.
 
-Para cadastrar vários usuários, defina `APP_USERS_JSON` no `.env`. Administradores podem conectar e reconectar os portais; operadores usam as conexões globais já abertas e realizam consultas:
+Para cadastrar vários usuários, defina `APP_USERS_JSON` no `.env`. Todos os usuários autenticados podem conectar ou reconectar os portais e usar as conexões globais já abertas:
 
 ```env
 APP_USERS_JSON=[{"username":"admin","password":"senha-forte-admin","role":"admin"},{"username":"vendedor1","password":"senha-forte-vendedor","role":"operator"}]

@@ -161,11 +161,6 @@ const server = createServer(async (request, response) => {
         /^\/api\/portals\/([a-z0-9-]+)\/(connect|captcha)$/,
       );
       if (request.method === "POST" && portalAction) {
-        if (authentication.session.role !== "admin") {
-          return json(response, 403, {
-            error: { code: "FORBIDDEN", message: "Somente administradores podem conectar portais." },
-          });
-        }
         const [, portalId, action] = portalAction;
         if (action === "connect") {
           return json(response, 200, await portals.prepareLogin(portalId));
