@@ -330,7 +330,8 @@ export class PortalDoConsignado {
       }
 
       return {
-        portal: this.options.id,
+        portal: this.options.queryPortalId,
+        connectionId: this.options.id,
         cpf: formatCpf(cpf),
         queriedAt: new Date().toISOString(),
         source: "real",

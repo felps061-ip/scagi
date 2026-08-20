@@ -20,6 +20,7 @@ export function createPortalService(config) {
     ]),
   );
   const history = [];
+  const roundRobinCursor = new Map();
 
   function getIntegration(portalId) {
     const integration = integrations.get(portalId);
@@ -29,19 +30,50 @@ export function createPortalService(config) {
     return integration;
   }
 
+  function getQueryIntegrations(queryPortalId) {
+    const candidates = [...integrations.values()].filter(
+      ({ definition }) => definition.queryPortalId === queryPortalId,
+    );
+    if (!candidates.length) {
+      throw new PortalError("INVALID_PORTAL", "Selecione uma averbadora válida.", 400);
+    }
+    return candidates;
+  }
+
+  function selectQueryIntegration(queryPortalId) {
+    const connected = getQueryIntegrations(queryPortalId).filter(
+      ({ portal }) => portal.status().state === "connected",
+    );
+    if (!connected.length) {
+      throw new PortalError(
+        "PORTAL_NOT_CONNECTED",
+        "Conecte pelo menos um acesso desta averbadora antes de consultar.",
+        409,
+      );
+    }
+
+    const cursor = roundRobinCursor.get(queryPortalId) || 0;
+    const selected = connected[cursor % connected.length];
+    roundRobinCursor.set(queryPortalId, cursor + 1);
+    return selected;
+  }
+
   function record(entry) {
     history.unshift(entry);
     history.splice(25);
   }
 
   return {
-    has(portalId) {
-      return integrations.has(portalId);
+    has(queryPortalId) {
+      return [...integrations.values()].some(
+        ({ definition }) => definition.queryPortalId === queryPortalId,
+      );
     },
 
     list() {
       return [...integrations.values()].map(({ definition, portal, queue }) => ({
         id: definition.id,
+        queryPortalId: definition.queryPortalId,
         name: definition.name,
         governments: definition.governments,
         queueLength: queue.pending,
@@ -63,8 +95,8 @@ export function createPortalService(config) {
       return queue.run(() => portal.submitCaptcha(captcha));
     },
 
-    query(portalId, cpf, actor) {
-      const { definition, portal, queue } = getIntegration(portalId);
+    query(queryPortalId, cpf, actor) {
+      const { definition, portal, queue } = selectQueryIntegration(queryPortalId);
       return queue.run(async () => {
         const startedAt = new Date().toISOString();
         try {

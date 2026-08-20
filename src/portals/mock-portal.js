@@ -28,7 +28,8 @@ export class MockPortalDoConsignado {
   async queryMargin(cpf) {
     await new Promise((resolve) => setTimeout(resolve, this.options.mockDelay ?? 650));
     return {
-      portal: this.options.id,
+      portal: this.options.queryPortalId,
+      connectionId: this.options.id,
       cpf: formatCpf(cpf),
       queriedAt: new Date().toISOString(),
       source: "mock",

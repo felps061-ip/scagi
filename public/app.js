@@ -58,23 +58,30 @@ function formatStatus(portal) {
   return portal.mode === "mock" ? "Demonstração ativa" : labels[portal.state] || "Status desconhecido";
 }
 
-function selectedPortal() {
-  return state.portals.get($("#portal-select").value) || null;
+function selectedConnections() {
+  const queryPortalId = $("#portal-select").value;
+  return [...state.portals.values()].filter(
+    (portal) => portal.queryPortalId === queryPortalId,
+  );
 }
 
 function renderSelectedPortal() {
-  const portal = selectedPortal();
-  state.portal = portal;
+  const connections = selectedConnections();
+  const connected = connections.filter((portal) => portal.state === "connected");
+  state.portal = connections[0] || null;
   const pill = $("#portal-pill");
-  if (!portal) {
+  if (!connections.length) {
     pill.className = "portal-pill warning";
     pill.innerHTML = "<span></span> Portal indisponível";
     $("#query-button").disabled = true;
     return;
   }
-  pill.className = `portal-pill ${portal.state === "connected" ? "connected" : "warning"}`;
-  pill.innerHTML = `<span></span> ${escapeHtml(formatStatus(portal))}`;
-  $("#query-button").disabled = portal.state !== "connected";
+  pill.className = `portal-pill ${connected.length ? "connected" : "warning"}`;
+  const statusLabel = connections.length > 1
+    ? `${connected.length}/${connections.length} acessos conectados`
+    : formatStatus(connections[0]);
+  pill.innerHTML = `<span></span> ${escapeHtml(statusLabel)}`;
+  $("#query-button").disabled = connected.length === 0;
 }
 
 function renderPortal(portal) {
@@ -86,14 +93,15 @@ function renderPortal(portal) {
   const connectButton = $(`[data-connect-portal="${portal.id}"]`);
   if (connectButton) {
     connectButton.textContent = portal.state === "connected" && portal.mode === "real"
-      ? "Reconectar portal"
-      : "Conectar portal";
+      ? "Reconectar acesso"
+      : "Conectar acesso";
   }
 }
 
 async function loadPortals() {
   try {
     const payload = await api("/api/portals");
+    state.portals.clear();
     payload.portals.forEach(renderPortal);
     renderSelectedPortal();
   } catch (error) {
@@ -182,7 +190,7 @@ async function startConnection(portalId) {
     showToast(error.message);
   } finally {
     button.disabled = false;
-    button.textContent = "Conectar portal";
+    button.textContent = "Conectar acesso";
     loadPortals();
   }
 }
@@ -244,7 +252,9 @@ $("#query-form").addEventListener("submit", async (event) => {
     showToast(error.message);
     if (["PORTAL_NOT_CONNECTED", "PORTAL_SESSION_EXPIRED"].includes(error.code)) switchView("integrations");
   } finally {
-    $("#query-button").disabled = selectedPortal()?.state !== "connected";
+    $("#query-button").disabled = !selectedConnections().some(
+      (portal) => portal.state === "connected",
+    );
   }
 });
 

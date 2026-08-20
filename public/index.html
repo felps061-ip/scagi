@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#071b31" />
     <title>SCAGI · Central de Averbadoras</title>
-    <link rel="stylesheet" href="/styles.css?v=2" />
-    <script src="/app.js?v=2" type="module"></script>
+    <link rel="stylesheet" href="/styles.css?v=3" />
+    <script src="/app.js?v=3" type="module"></script>
   </head>
   <body>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
@@ -198,15 +198,22 @@
         <section id="view-integrations" class="view" hidden>
           <div class="page-heading"><div><span class="eyebrow eyebrow-blue">CONEXÕES</span><h2>Integrações</h2><p>Gerencie as sessões dos portais de margem.</p></div></div>
           <div class="integrations-list">
+            <div class="integration-group-heading"><div><strong>Estado de São Paulo · PMESP</strong><span>Rodízio automático entre os acessos conectados</span></div><span class="pool-badge">POOL GOV SP</span></div>
             <div class="integration-card">
-              <div class="integration-logo">SP</div>
-              <div class="integration-info"><h3>Portal do Consignado</h3><p>Estado de São Paulo · PMESP</p><span class="inline-status" data-integration-status="portal-consignado">Carregando…</span></div>
-              <button class="button button-primary connect-button" data-connect-portal="portal-consignado" type="button">Conectar portal</button>
+              <div class="integration-logo">01</div>
+              <div class="integration-info"><h3>Gov SP · Acesso 1</h3><p>Portal do Consignado</p><span class="inline-status" data-integration-status="gov-sp-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="gov-sp-primary" type="button">Conectar acesso</button>
             </div>
             <div class="integration-card">
+              <div class="integration-logo">02</div>
+              <div class="integration-info"><h3>Gov SP · Acesso 2</h3><p>Portal do Consignado</p><span class="inline-status" data-integration-status="gov-sp-secondary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="gov-sp-secondary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Prefeitura de São Paulo</strong><span>Acesso municipal independente</span></div></div>
+            <div class="integration-card">
               <div class="integration-logo integration-logo-city">PS</div>
-              <div class="integration-info"><h3>Prefeitura de São Paulo</h3><p>Município de São Paulo · Portal do Consignado</p><span class="inline-status" data-integration-status="prefeitura-sao-paulo">Carregando…</span></div>
-              <button class="button button-primary connect-button" data-connect-portal="prefeitura-sao-paulo" type="button">Conectar portal</button>
+              <div class="integration-info"><h3>Prefeitura de São Paulo</h3><p>Município de São Paulo · Portal do Consignado</p><span class="inline-status" data-integration-status="prefeitura-sao-paulo-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="prefeitura-sao-paulo-primary" type="button">Conectar acesso</button>
             </div>
           </div>
           <div class="info-card"><strong>Por que existe um CAPTCHA?</strong><p>O portal exige confirmação humana no login. O SCAGI preenche as credenciais guardadas no servidor e solicita apenas a leitura do CAPTCHA, sem expor a senha aos vendedores.</p></div>
