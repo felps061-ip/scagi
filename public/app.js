@@ -68,11 +68,15 @@ function selectedConnections() {
 function renderSelectedPortal() {
   const connections = selectedConnections();
   const connected = connections.filter((portal) => portal.state === "connected");
+  const connectionToOpen = connections.find((portal) => portal.state !== "connected") || connections[0];
   state.portal = connections[0] || null;
   const pill = $("#portal-pill");
+  const connectButton = $("#query-connect-button");
   if (!connections.length) {
     pill.className = "portal-pill warning";
     pill.innerHTML = "<span></span> Portal indisponível";
+    connectButton.hidden = true;
+    delete connectButton.dataset.connectPortal;
     $("#query-button").disabled = true;
     return;
   }
@@ -81,6 +85,11 @@ function renderSelectedPortal() {
     ? `${connected.length}/${connections.length} acessos conectados`
     : formatStatus(connections[0]);
   pill.innerHTML = `<span></span> ${escapeHtml(statusLabel)}`;
+  connectButton.hidden = false;
+  connectButton.dataset.connectPortal = connectionToOpen.id;
+  connectButton.textContent = connected.length === connections.length && connectionToOpen.mode === "real"
+    ? "Reconectar acesso"
+    : "Conectar acesso";
   $("#query-button").disabled = connected.length === 0;
 }
 
@@ -90,12 +99,12 @@ function renderPortal(portal) {
   if (statusElement) {
     statusElement.textContent = `${formatStatus(portal)} · ${portal.message}`;
   }
-  const connectButton = $(`[data-connect-portal="${portal.id}"]`);
-  if (connectButton) {
+  const connectButtons = $$(`[data-connect-portal="${portal.id}"]`);
+  connectButtons.forEach((connectButton) => {
     connectButton.textContent = portal.state === "connected" && portal.mode === "real"
       ? "Reconectar acesso"
       : "Conectar acesso";
-  }
+  });
 }
 
 async function loadPortals() {
@@ -170,9 +179,11 @@ async function startConnection(portalId) {
   if (!portalId) return;
   state.activePortalId = portalId;
   const portal = state.portals.get(portalId);
-  const button = $(`[data-connect-portal="${portalId}"]`);
-  button.disabled = true;
-  button.textContent = "Abrindo portal…";
+  const buttons = $$(`[data-connect-portal="${portalId}"]`);
+  buttons.forEach((button) => {
+    button.disabled = true;
+    button.textContent = "Abrindo portal…";
+  });
   try {
     const status = await api(`/api/portals/${portalId}/connect`, { method: "POST" });
     if (status.captchaImage) {
@@ -189,8 +200,10 @@ async function startConnection(portalId) {
   } catch (error) {
     showToast(error.message);
   } finally {
-    button.disabled = false;
-    button.textContent = "Conectar acesso";
+    buttons.forEach((button) => {
+      button.disabled = false;
+      button.textContent = "Conectar acesso";
+    });
     loadPortals();
   }
 }
@@ -232,6 +245,9 @@ $("#cpf-input").addEventListener("input", (event) => { event.target.value = form
 $("#portal-select").addEventListener("change", renderSelectedPortal);
 $$('[data-connect-portal]').forEach((button) => {
   button.addEventListener("click", () => startConnection(button.dataset.connectPortal));
+});
+$("#query-connect-button").addEventListener("click", (event) => {
+  startConnection(event.currentTarget.dataset.connectPortal);
 });
 
 $("#query-form").addEventListener("submit", async (event) => {

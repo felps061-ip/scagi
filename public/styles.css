@@ -104,6 +104,7 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .page-heading { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 27px; }
 .page-heading h2 { font-size: 31px; }
 .page-heading p { margin: 0; color: var(--muted); font-size: 14px; }
+.portal-actions { display: flex; align-items: center; gap: 10px; }
 .portal-pill { display: flex; align-items: center; gap: 9px; padding: 9px 13px; border: 1px solid #dce6ee; border-radius: 999px; background: #fff; color: #5d6d80; font-size: 11px; }
 .portal-pill span { width: 7px; height: 7px; border-radius: 50%; background: #9ca8b7; }
 .portal-pill.connected span { background: var(--success); box-shadow: 0 0 0 4px rgba(11,159,114,.1); }
@@ -122,6 +123,7 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .flag-sp { position: absolute; left: 13px; width: 29px; height: 21px; display: grid; place-items: center; border-radius: 4px; color: #fff; background: linear-gradient(135deg,#111 0 45%,#fff 45% 55%,#d52a32 55%); box-shadow: 0 1px 4px #bbb; font-size: 8px; font-weight: 900; text-shadow: 0 1px 2px #000; }
 .input-large { min-height: 52px; }
 .query-button { min-height: 52px; padding: 0 25px; }
+.query-connect-button { min-height: 38px; padding: 0 15px; font-size: 11px; }
 .privacy-note { display: flex; align-items: center; gap: 8px; margin-top: 18px; padding-top: 16px; border-top: 1px solid #edf0f4; color: #8995a5; font-size: 10px; }
 .privacy-note svg { width: 15px; height: 15px; color: #6d8297; }
 .empty-result { min-height: 260px; display: grid; place-items: center; align-content: center; margin-top: 24px; border: 1px dashed #d7dfe8; border-radius: 12px; text-align: center; background: rgba(255,255,255,.45); }
@@ -210,6 +212,7 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 
 @media (max-width: 560px) {
   .page-heading, .result-head, .provision-title { align-items: flex-start; flex-direction: column; gap: 15px; }
+  .portal-actions { align-items: flex-start; flex-direction: column; }
   .portal-pill { align-self: flex-start; }
   .result-cpf { text-align: left; }
   .integration-card { grid-template-columns: auto 1fr; }
