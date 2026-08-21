@@ -4,6 +4,7 @@ import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { PortalError } from "./portals/errors.js";
 
 const USERNAME_PATTERN = /^[a-z0-9._-]{3,40}$/;
+const CREATABLE_ROLES = new Set(["operator", "supervisor"]);
 
 function normalizeUsername(value) {
   return String(value || "").trim().toLowerCase();
@@ -37,6 +38,12 @@ function passwordMatches(password, user) {
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 
+function publicUser(user) {
+  return user
+    ? { username: user.username, role: user.role, createdAt: user.createdAt }
+    : null;
+}
+
 export function createUserStore({ filePath, seedUsers }) {
   let users = [];
   try {
@@ -52,7 +59,7 @@ export function createUserStore({ filePath, seedUsers }) {
       const password = hashPassword(seed.password);
       users.push({
         username,
-        role: seed.role === "admin" ? "admin" : "operator",
+        role: ["admin", "supervisor"].includes(seed.role) ? seed.role : "operator",
         passwordHash: password.hash,
         salt: password.salt,
         createdAt: new Date().toISOString(),
@@ -72,30 +79,48 @@ export function createUserStore({ filePath, seedUsers }) {
       return users.map(({ username, role, createdAt }) => ({ username, role, createdAt }));
     },
 
+    get(usernameValue) {
+      return publicUser(
+        users.find((candidate) => candidate.username === normalizeUsername(usernameValue)),
+      );
+    },
+
     authenticate(username, password) {
       const user = users.find((candidate) => candidate.username === normalizeUsername(username));
       if (!user || !passwordMatches(password, user)) return null;
       return { username: user.username, role: user.role };
     },
 
-    createSeller(usernameValue, password) {
+    createUser(usernameValue, password, roleValue = "operator") {
       const username = normalizeUsername(usernameValue);
+      const role = String(roleValue || "operator").trim().toLowerCase();
       validateUsername(username);
       validatePassword(password);
+      if (!CREATABLE_ROLES.has(role)) {
+        throw new PortalError(
+          "INVALID_USER_ROLE",
+          "O perfil deve ser vendedor ou supervisor.",
+          400,
+        );
+      }
       if (users.some((user) => user.username === username)) {
         throw new PortalError("USER_EXISTS", "Esse usuário já existe.", 409);
       }
       const credentials = hashPassword(password);
       const user = {
         username,
-        role: "operator",
+        role,
         passwordHash: credentials.hash,
         salt: credentials.salt,
         createdAt: new Date().toISOString(),
       };
       users.push(user);
       persist();
-      return { username: user.username, role: user.role, createdAt: user.createdAt };
+      return publicUser(user);
+    },
+
+    createSeller(usernameValue, password) {
+      return this.createUser(usernameValue, password, "operator");
     },
 
     resetPassword(usernameValue, password) {
@@ -107,7 +132,7 @@ export function createUserStore({ filePath, seedUsers }) {
       user.passwordHash = credentials.hash;
       user.salt = credentials.salt;
       persist();
-      return { username: user.username, role: user.role, createdAt: user.createdAt };
+      return publicUser(user);
     },
 
     remove(usernameValue) {

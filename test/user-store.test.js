@@ -14,8 +14,10 @@ test("cria, autentica, redefine e remove vendedores com persistência", () => {
       seedUsers: [{ username: "admin", password: "senha-admin", role: "admin" }],
     });
     store.createSeller("Maria.Silva", "senha-inicial");
+    store.createUser("supervisor1", "senha-supervisor", "supervisor");
 
     assert.equal(store.authenticate("maria.silva", "senha-inicial").role, "operator");
+    assert.equal(store.authenticate("supervisor1", "senha-supervisor").role, "supervisor");
     assert.equal(readFileSync(filePath, "utf8").includes("senha-inicial"), false);
 
     store.resetPassword("maria.silva", "senha-alterada");
@@ -23,7 +25,7 @@ test("cria, autentica, redefine e remove vendedores com persistência", () => {
     assert.equal(store.authenticate("maria.silva", "senha-alterada").username, "maria.silva");
 
     store.remove("maria.silva");
-    assert.deepEqual(store.list().map(({ username }) => username), ["admin"]);
+    assert.deepEqual(store.list().map(({ username }) => username), ["admin", "supervisor1"]);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -37,6 +39,9 @@ test("protege o administrador e rejeita usuário duplicado", () => {
       seedUsers: [{ username: "admin", password: "senha-admin", role: "admin" }],
     });
     assert.throws(() => store.createSeller("admin", "outra-senha"), { code: "USER_EXISTS" });
+    assert.throws(() => store.createUser("admin2", "outra-senha", "admin"), {
+      code: "INVALID_USER_ROLE",
+    });
     assert.throws(() => store.remove("admin"), { code: "ADMIN_PROTECTED" });
   } finally {
     rmSync(directory, { recursive: true, force: true });

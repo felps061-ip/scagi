@@ -18,7 +18,7 @@ export function parseAppUsers(raw, fallbackUser, fallbackPassword) {
   return users.map((user) => ({
     username: String(user?.username || "").trim(),
     password: String(user?.password || ""),
-    role: user?.role === "admin" ? "admin" : "operator",
+    role: ["admin", "supervisor"].includes(user?.role) ? user.role : "operator",
   }));
 }
 

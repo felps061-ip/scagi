@@ -31,6 +31,15 @@ const portalMetadata = {
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const roleLabels = {
+  admin: "Administrador",
+  supervisor: "Supervisor",
+  operator: "Vendedor",
+};
+
+function canManageUsers() {
+  return ["admin", "supervisor"].includes(state.user?.role);
+}
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -68,9 +77,18 @@ function showApp() {
   $("#app-view").hidden = false;
   const username = state.user?.username || "Operador";
   $("#current-user").textContent = username;
-  $("#current-user-role").textContent = state.user?.role === "admin" ? "Administrador" : "Vendedor";
+  $("#current-user-role").textContent = roleLabels[state.user?.role] || "Vendedor";
   $("#current-user-avatar").textContent = username.slice(0, 2).toUpperCase();
-  $("#users-nav-item").hidden = state.user?.role !== "admin";
+  $("#users-nav-item").hidden = !canManageUsers();
+  const isAdmin = state.user?.role === "admin";
+  $("#new-user-role-field").hidden = !isAdmin;
+  $("#new-user-role").disabled = !isAdmin;
+  $("#new-user-role").value = "operator";
+  $("#new-user-title").textContent = isAdmin ? "Novo acesso" : "Novo vendedor";
+  $("#new-user-description").textContent = isAdmin
+    ? "Crie vendedores ou supervisores para a equipe."
+    : "Supervisores podem criar somente acessos de vendedores.";
+  $("#create-user-button").textContent = isAdmin ? "Criar acesso" : "Criar vendedor";
   loadPortals();
 }
 
@@ -164,7 +182,7 @@ async function loadPortals() {
 }
 
 function switchView(name) {
-  if (name === "users" && state.user?.role !== "admin") name = "query";
+  if (name === "users" && !canManageUsers()) name = "query";
   $$(".view").forEach((view) => {
     view.hidden = view.id !== `view-${name}`;
   });
@@ -276,11 +294,11 @@ async function loadUsers() {
     const { users } = await api("/api/users");
     $("#users-body").innerHTML = users.map((user) => `<tr>
       <td><strong>${escapeHtml(user.username)}</strong></td>
-      <td><span class="user-role">${user.role === "admin" ? "Administrador" : "Vendedor"}</span></td>
+      <td><span class="user-role">${roleLabels[user.role] || "Vendedor"}</span></td>
       <td>${escapeHtml(new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(user.createdAt)))}</td>
       <td><div class="user-actions">
-        <button class="button button-secondary" data-reset-user="${user.username}" type="button">Redefinir senha</button>
-        ${user.role === "admin" ? "" : `<button class="button button-danger" data-remove-user="${user.username}" type="button">Remover</button>`}
+        ${state.user?.role === "admin" || user.role === "operator" ? `<button class="button button-secondary" data-reset-user="${user.username}" type="button">Redefinir senha</button>` : ""}
+        ${state.user?.role === "admin" && user.role !== "admin" ? `<button class="button button-danger" data-remove-user="${user.username}" type="button">Remover</button>` : ""}
       </div></td>
     </tr>`).join("");
   } catch (error) {
@@ -408,6 +426,7 @@ $("#new-multiple-query-button").addEventListener("click", resetQueryResult);
 $("#create-user-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const button = event.submitter;
+  const requestedRole = state.user?.role === "admin" ? $("#new-user-role").value : "operator";
   button.disabled = true;
   try {
     await api("/api/users", {
@@ -415,11 +434,13 @@ $("#create-user-form").addEventListener("submit", async (event) => {
       body: JSON.stringify({
         username: $("#new-user-username").value,
         password: $("#new-user-password").value,
+        role: requestedRole,
       }),
     });
     event.currentTarget.reset();
+    $("#new-user-role").value = "operator";
     await loadUsers();
-    showToast("Vendedor criado com sucesso.", "success");
+    showToast(`${roleLabels[requestedRole]} criado com sucesso.`, "success");
   } catch (error) {
     showToast(error.message);
   } finally {

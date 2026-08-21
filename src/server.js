@@ -15,6 +15,13 @@ import {
   sessionCookie,
 } from "./security.js";
 import { createUserStore } from "./user-store.js";
+import {
+  canCreateUser,
+  canManageUsers,
+  canRemoveUser,
+  canResetUserPassword,
+  visibleUsersForRole,
+} from "./user-permissions.js";
 
 validateConfig();
 
@@ -166,29 +173,60 @@ const server = createServer(async (request, response) => {
       }
 
       if (url.pathname === "/api/users" || url.pathname.startsWith("/api/users/")) {
-        if (authentication.session.role !== "admin") {
+        const actorRole = authentication.session.role;
+        if (!canManageUsers(actorRole)) {
           return json(response, 403, {
-            error: { code: "FORBIDDEN", message: "Somente administradores podem gerenciar usuários." },
+            error: { code: "FORBIDDEN", message: "Seu perfil não pode gerenciar vendedores." },
           });
         }
 
         if (request.method === "GET" && url.pathname === "/api/users") {
-          return json(response, 200, { users: userStore.list() });
+          return json(response, 200, {
+            users: visibleUsersForRole(userStore.list(), actorRole),
+          });
         }
 
         if (request.method === "POST" && url.pathname === "/api/users") {
           const body = await readJson(request);
-          return json(response, 201, { user: userStore.createSeller(body.username, body.password) });
+          const requestedRole = String(body.role || "operator").trim().toLowerCase();
+          if (!canCreateUser(actorRole, requestedRole)) {
+            return json(response, 403, {
+              error: {
+                code: "FORBIDDEN",
+                message: "Seu perfil não pode criar esse tipo de usuário.",
+              },
+            });
+          }
+          return json(response, 201, {
+            user: userStore.createUser(body.username, body.password, requestedRole),
+          });
         }
 
         const userAction = url.pathname.match(/^\/api\/users\/([a-z0-9._-]+)(?:\/(password))?$/);
         if (userAction && request.method === "PATCH" && userAction[2] === "password") {
+          const target = userStore.get(userAction[1]);
+          if (!target) {
+            throw new PortalError("USER_NOT_FOUND", "Usuário não encontrado.", 404);
+          }
+          if (!canResetUserPassword(actorRole, target.role)) {
+            return json(response, 403, {
+              error: {
+                code: "FORBIDDEN",
+                message: "Supervisores só podem redefinir senhas de vendedores.",
+              },
+            });
+          }
           const body = await readJson(request);
           const user = userStore.resetPassword(userAction[1], body.password);
           sessions.destroyByUsername(user.username);
           return json(response, 200, { user });
         }
         if (userAction && request.method === "DELETE" && !userAction[2]) {
+          if (!canRemoveUser(actorRole)) {
+            return json(response, 403, {
+              error: { code: "FORBIDDEN", message: "Supervisores não podem remover usuários." },
+            });
+          }
           if (userAction[1] === authentication.session.username) {
             return json(response, 409, {
               error: { code: "CANNOT_DELETE_SELF", message: "Você não pode remover o próprio usuário." },

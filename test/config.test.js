@@ -4,13 +4,14 @@ import { parseAppUsers } from "../src/config.js";
 
 test("lê múltiplos usuários do SCAGI", () => {
   const users = parseAppUsers(
-    '[{"username":"admin","password":"a","role":"admin"},{"username":"vendedor","password":"b","role":"operator"}]',
+    '[{"username":"admin","password":"a","role":"admin"},{"username":"supervisor","password":"c","role":"supervisor"},{"username":"vendedor","password":"b","role":"operator"}]',
     "ignorado",
     "ignorada",
   );
 
   assert.deepEqual(users, [
     { username: "admin", password: "a", role: "admin" },
+    { username: "supervisor", password: "c", role: "supervisor" },
     { username: "vendedor", password: "b", role: "operator" },
   ]);
 });

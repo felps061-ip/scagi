@@ -6,6 +6,7 @@ MVP do **Sistema Centralizado de Averbadoras do Grupo Império**. O Portal do Co
 
 - login próprio do SCAGI, com sessão HTTP-only;
 - múltiplos usuários com perfis de administrador e vendedor;
+- perfil de supervisor, autorizado a consultar, criar vendedores e redefinir somente senhas de vendedores;
 - conexões dos portais compartilhadas no servidor entre todos os vendedores;
 - seleção da averbadora e entrada de CPF com validação;
 - consulta dos governos do Piauí e de Pernambuco por matrícula e CPF, removendo automaticamente hífen e pontuação da matrícula;
@@ -34,12 +35,12 @@ Acesse `http://127.0.0.1:3000`. Sem arquivo `.env`, o acesso de desenvolvimento 
 Para cadastrar vários usuários, defina `APP_USERS_JSON` no `.env`. Todos os usuários autenticados podem conectar ou reconectar os portais e usar as conexões globais já abertas:
 
 ```env
-APP_USERS_JSON=[{"username":"admin","password":"senha-forte-admin","role":"admin"},{"username":"vendedor1","password":"senha-forte-vendedor","role":"operator"}]
+APP_USERS_JSON=[{"username":"admin","password":"senha-forte-admin","role":"admin"},{"username":"supervisor1","password":"senha-forte-supervisor","role":"supervisor"},{"username":"vendedor1","password":"senha-forte-vendedor","role":"operator"}]
 ```
 
 As sessões dos portais pertencem ao processo do servidor SCAGI, não ao login individual. Assim, quando qualquer usuário conecta um portal, todos os vendedores autenticados nesse mesmo servidor passam a enxergá-lo conectado.
 
-O administrador pode abrir **Vendedores** no menu para criar logins, redefinir senhas e remover acessos. As senhas são derivadas com `scrypt` e persistidas somente como hash em `.data/users.json`, arquivo ignorado pelo Git. Redefinir uma senha ou remover um vendedor encerra as sessões atuais desse usuário.
+O administrador pode abrir **Vendedores** no menu para criar vendedores ou supervisores, redefinir senhas e remover acessos. O supervisor vê somente vendedores, pode criar novos vendedores e redefinir as senhas deles, mas não pode criar supervisores, remover usuários ou alterar contas administrativas. As senhas são derivadas com `scrypt` e persistidas somente como hash em `.data/users.json`, arquivo ignorado pelo Git. Redefinir uma senha ou remover um vendedor encerra as sessões atuais desse usuário.
 
 Para testar uma consulta, use um CPF matematicamente válido, por exemplo `529.982.247-25`. Nenhum dado desse CPF é enviado a um portal enquanto `PORTAL_MODE=mock`.
 

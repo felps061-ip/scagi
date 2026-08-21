@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#090908" />
     <title>SCAGI · Grupo Império</title>
-    <link rel="stylesheet" href="/styles.css?v=10" />
-    <script src="/app.js?v=7" type="module"></script>
+    <link rel="stylesheet" href="/styles.css?v=11" />
+    <script src="/app.js?v=8" type="module"></script>
   </head>
   <body>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
@@ -294,10 +294,11 @@
         <section id="view-users" class="view" hidden>
           <div class="page-heading"><div><span class="eyebrow eyebrow-blue">ADMINISTRAÇÃO</span><h2>Vendedores</h2><p>Crie e gerencie os acessos individuais da equipe.</p></div></div>
           <form id="create-user-form" class="user-create-card">
-            <div><h3>Novo vendedor</h3><p>O vendedor poderá consultar margens e conectar os portais compartilhados.</p></div>
+            <div><h3 id="new-user-title">Novo acesso</h3><p id="new-user-description">Crie vendedores ou supervisores para a equipe.</p></div>
             <label class="field"><span>Nome de usuário</span><span class="input-wrap"><input id="new-user-username" minlength="3" maxlength="40" autocomplete="off" required placeholder="ex.: maria.silva" /></span></label>
+            <label id="new-user-role-field" class="field"><span>Privilégio</span><span class="select-wrap select-wrap-plain"><select id="new-user-role"><option value="operator">Vendedor</option><option value="supervisor">Supervisor</option></select></span></label>
             <label class="field"><span>Senha inicial</span><span class="input-wrap"><input id="new-user-password" type="password" minlength="8" autocomplete="new-password" required placeholder="Mínimo de 8 caracteres" /></span></label>
-            <button class="button button-primary" type="submit">Criar vendedor</button>
+            <button id="create-user-button" class="button button-primary" type="submit">Criar acesso</button>
           </form>
           <div class="history-card users-card">
             <table>
