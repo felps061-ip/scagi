@@ -27,7 +27,7 @@ export class MockPortalDoConsignado {
 
   async queryMargin(cpf, parameters = {}) {
     await new Promise((resolve) => setTimeout(resolve, this.options.mockDelay ?? 650));
-    const isPiaui = this.options.adapter === "consigfacil-piaui";
+    const isConsigfacil = this.options.adapter === "consigfacil";
     return {
       portal: this.options.queryPortalId,
       connectionId: this.options.id,
@@ -38,14 +38,14 @@ export class MockPortalDoConsignado {
         {
           name: "CLIENTE DE DEMONSTRAÇÃO",
           agency: this.options.mockAgency,
-          registration: isPiaui ? parameters.registration || "2148609" : "000000",
+          registration: isConsigfacil ? parameters.registration || "2148609" : "000000",
           referenceMonth: new Intl.DateTimeFormat("pt-BR", {
             month: "2-digit",
             year: "numeric",
           }).format(new Date()),
           nextPayrollProcessing: "Não informado",
-          provision: isPiaui ? "Margens disponíveis" : "Provimento 1",
-          margins: isPiaui
+          provision: isConsigfacil ? "Margens disponíveis" : "Provimento 1",
+          margins: isConsigfacil
             ? [
                 { product: "MARGEM CONSIGNÁVEL", value: "226,87" },
                 { product: "MARGEM CARTÃO", value: "194,40" },

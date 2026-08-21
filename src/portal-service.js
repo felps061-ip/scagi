@@ -11,7 +11,7 @@ const QUERY_CHALLENGE_TTL = 10 * 60 * 1000;
 export function createPortalService(config, dependencies = {}) {
   const createPortal = dependencies.createPortal || ((definition) => {
     if (config.portalMode !== "real") return new MockPortalDoConsignado(definition);
-    return definition.adapter === "consigfacil-piaui"
+    return definition.adapter === "consigfacil"
       ? new ConsigfacilPiaui(definition)
       : new PortalDoConsignado(definition);
   });

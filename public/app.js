@@ -8,6 +8,19 @@ const state = {
   portalMode: "mock",
 };
 
+const registrationPortalMetadata = {
+  piaui: {
+    code: "PI",
+    flagClass: "flag-pi",
+    transparencyUrl: "https://transparencia.pi.gov.br/servidores",
+  },
+  pernambuco: {
+    code: "PE",
+    flagClass: "flag-pe",
+    transparencyUrl: "https://transparencia.pe.gov.br/recursos-humanos/remuneracoes/",
+  },
+};
+
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 
@@ -72,15 +85,17 @@ function selectedConnections() {
 }
 
 function updateQueryFields() {
-  const isPiaui = $("#portal-select").value === "piaui";
+  const metadata = registrationPortalMetadata[$("#portal-select").value];
+  const requiresRegistration = Boolean(metadata);
   const registrationField = $("#registration-field");
   const registrationInput = $("#registration-input");
-  registrationField.hidden = !isPiaui;
-  registrationInput.required = isPiaui;
-  $(".query-grid").classList.toggle("with-registration", isPiaui);
+  registrationField.hidden = !requiresRegistration;
+  registrationInput.required = requiresRegistration;
+  $(".query-grid").classList.toggle("with-registration", requiresRegistration);
   const flag = $("#portal-flag");
-  flag.textContent = isPiaui ? "PI" : "SP";
-  flag.className = `government-flag ${isPiaui ? "flag-pi" : "flag-sp"}`;
+  flag.textContent = metadata?.code || "SP";
+  flag.className = `government-flag ${metadata?.flagClass || "flag-sp"}`;
+  if (metadata) $("#registration-help-link").href = metadata.transparencyUrl;
 }
 
 function renderSelectedPortal() {
@@ -309,6 +324,7 @@ $("#query-form").addEventListener("submit", async (event) => {
       $("#query-captcha-image").src = result.captchaImage;
       $("#query-captcha-input").value = "";
       $("#query-captcha-error").hidden = true;
+      $("#query-captcha-portal-name").textContent = `${result.portalName || "ConsigFácil"} · CONSIGFÁCIL`;
       $("#loading-result").hidden = true;
       $("#empty-result").hidden = false;
       $("#query-captcha-dialog").showModal();
@@ -465,7 +481,7 @@ $("#query-captcha-form").addEventListener("submit", async (event) => {
     state.activeQueryChallengeId = null;
     $("#query-captcha-dialog").close();
     renderResult(result);
-    showToast("Consulta do Piauí concluída com sucesso.", "success");
+    showToast("Consulta concluída com sucesso.", "success");
   } catch (error) {
     $("#loading-result").hidden = true;
     $("#empty-result").hidden = false;

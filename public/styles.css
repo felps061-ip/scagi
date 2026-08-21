@@ -127,6 +127,7 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .government-flag { position: absolute; left: 13px; width: 29px; height: 21px; display: grid; place-items: center; border-radius: 4px; color: #fff; box-shadow: 0 1px 4px #bbb; font-size: 8px; font-weight: 900; text-shadow: 0 1px 2px #000; }
 .flag-sp { background: linear-gradient(135deg,#111 0 45%,#fff 45% 55%,#d52a32 55%); }
 .flag-pi { color: #153a22; background: linear-gradient(180deg,#22964b 0 50%,#f1d33b 50%); text-shadow: none; }
+.flag-pe { background: linear-gradient(135deg,#173f8f 0 48%,#fff 48% 58%,#e73838 58%); }
 .input-large { min-height: 52px; }
 .query-button { min-height: 52px; padding: 0 25px; }
 .query-connect-button { min-height: 38px; padding: 0 15px; font-size: 11px; }
@@ -173,6 +174,7 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .integration-logo { width: 55px; height: 55px; display: grid; place-items: center; border-radius: 11px; color: #fff; background: linear-gradient(145deg,#0c2949,#0874ed); font-weight: 850; }
 .integration-logo-city { background: linear-gradient(145deg,#123f35,#0b9f72); }
 .integration-logo-piaui { color: #173b25; background: linear-gradient(145deg,#f4d83e,#34a853); }
+.integration-logo-pernambuco { color: #fff; background: linear-gradient(145deg,#173f8f,#e73838); }
 .integration-info { min-width: 0; }
 .inline-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; color: var(--muted); font-size: 10px; }
 .info-card { margin-top: 18px; padding: 20px 23px; }

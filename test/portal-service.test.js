@@ -30,12 +30,22 @@ const portalDefinitions = [
   },
   {
     id: "piaui-primary",
-    adapter: "consigfacil-piaui",
+    adapter: "consigfacil",
     queryPortalId: "piaui",
     name: "Governo do Piauí",
     governments: ["Piauí"],
     queryFields: ["registration"],
     mockAgency: "GOVERNO DO ESTADO DO PIAUÍ",
+    mockDelay: 0,
+  },
+  {
+    id: "pernambuco-primary",
+    adapter: "consigfacil",
+    queryPortalId: "pernambuco",
+    name: "Governo de Pernambuco",
+    governments: ["Pernambuco"],
+    queryFields: ["registration"],
+    mockAgency: "GOVERNO DO ESTADO DE PERNAMBUCO",
     mockDelay: 0,
   },
 ];
@@ -48,6 +58,7 @@ test("alterna consultas Gov SP entre os acessos conectados", async () => {
     "gov-sp-secondary",
     "prefeitura-sao-paulo-primary",
     "piaui-primary",
+    "pernambuco-primary",
   ]);
 
   const first = await service.query("portal-consignado", "52998224725", "admin");
@@ -90,6 +101,21 @@ test("consulta o Piauí com matrícula e cartões próprios no modo de demonstra
     result.employments[0].margins.map(({ product }) => product),
     ["MARGEM CONSIGNÁVEL", "MARGEM CARTÃO"],
   );
+  await service.close();
+});
+
+test("mantém Pernambuco em sessão própria com matrícula obrigatória", async () => {
+  const service = createPortalService({ portalMode: "mock", portals: portalDefinitions });
+  assert.deepEqual(service.requirements("pernambuco"), { fields: ["registration"] });
+  const result = await service.query(
+    "pernambuco",
+    "52998224725",
+    "admin",
+    { registration: "9876543" },
+  );
+  assert.equal(result.connectionId, "pernambuco-primary");
+  assert.equal(result.employments[0].agency, "GOVERNO DO ESTADO DE PERNAMBUCO");
+  assert.equal(result.employments[0].registration, "9876543");
   await service.close();
 });
 

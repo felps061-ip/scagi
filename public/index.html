@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#090908" />
     <title>SCAGI · Grupo Império</title>
-    <link rel="stylesheet" href="/styles.css?v=7" />
-    <script src="/app.js?v=4" type="module"></script>
+    <link rel="stylesheet" href="/styles.css?v=8" />
+    <script src="/app.js?v=5" type="module"></script>
   </head>
   <body>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
@@ -24,7 +24,7 @@
             <p>Centralize margens consignáveis com a segurança, a agilidade e a excelência que fazem parte do nosso império.</p>
           </div>
           <div class="story-stats">
-            <div><strong>04</strong><span>acessos integrados</span></div>
+            <div><strong>05</strong><span>acessos integrados</span></div>
             <div><strong>100%</strong><span>consulta centralizada</span></div>
           </div>
         </div>
@@ -149,6 +149,7 @@
                     <option value="portal-consignado">São Paulo e PMESP · Portal do Consignado</option>
                     <option value="prefeitura-sao-paulo">Prefeitura de São Paulo · Portal do Consignado</option>
                     <option value="piaui">Governo do Piauí · ConsigFácil</option>
+                    <option value="pernambuco">Pernambuco · PEConsig</option>
                   </select>
                   <span id="portal-flag" class="government-flag flag-sp" aria-hidden="true">SP</span>
                 </span>
@@ -156,7 +157,7 @@
               <label id="registration-field" class="field" hidden>
                 <span class="field-label-actions">
                   <span>Matrícula do servidor</span>
-                  <a class="field-help-link" href="https://transparencia.pi.gov.br/servidores" target="_blank" rel="noopener noreferrer">Buscar matrícula ↗</a>
+                  <a id="registration-help-link" class="field-help-link" href="https://transparencia.pi.gov.br/servidores" target="_blank" rel="noopener noreferrer">Buscar matrícula ↗</a>
                 </span>
                 <span class="input-wrap input-large">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h1M8 13h1M12 9h4M12 13h4" /></svg>
@@ -241,8 +242,14 @@
               <div class="integration-info"><h3>Governo do Piauí</h3><p>ConsigFácil · SEAD Piauí</p><span class="inline-status" data-integration-status="piaui-primary">Carregando…</span></div>
               <button class="button button-primary connect-button" data-connect-portal="piaui-primary" type="button">Conectar acesso</button>
             </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo de Pernambuco</strong><span>Acesso estadual independente</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-pernambuco">PE</div>
+              <div class="integration-info"><h3>Governo de Pernambuco</h3><p>PEConsig · Governo de Pernambuco</p><span class="inline-status" data-integration-status="pernambuco-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="pernambuco-primary" type="button">Conectar acesso</button>
+            </div>
           </div>
-          <div class="info-card"><strong>Por que existe um CAPTCHA?</strong><p>Os portais exigem confirmação humana. O SCAGI mantém as credenciais no servidor e solicita apenas a leitura da imagem. No ConsigFácil do Piauí, há uma confirmação no login e outra em cada consulta.</p></div>
+          <div class="info-card"><strong>Por que existe um CAPTCHA?</strong><p>Os portais exigem confirmação humana. O SCAGI mantém as credenciais no servidor e solicita apenas a leitura da imagem. Nos portais ConsigFácil, há uma confirmação no login e outra em cada consulta.</p></div>
         </section>
 
         <section id="view-history" class="view" hidden>
@@ -295,7 +302,7 @@
 
     <dialog id="query-captcha-dialog" class="dialog">
       <form id="query-captcha-form" method="dialog">
-        <div class="dialog-head"><div><span class="eyebrow eyebrow-blue">GOVERNO DO PIAUÍ · CONSIGFÁCIL</span><h2>Confirmar consulta</h2></div><button id="close-query-captcha" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
+        <div class="dialog-head"><div><span id="query-captcha-portal-name" class="eyebrow eyebrow-blue">CONSIGFÁCIL</span><h2>Confirmar consulta</h2></div><button id="close-query-captcha" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
         <p>A matrícula e o CPF já foram preenchidos. Digite os caracteres da imagem para concluir a pesquisa.</p>
         <div class="captcha-image-wrap"><img id="query-captcha-image" alt="CAPTCHA da consulta no ConsigFácil" /></div>
         <label class="field"><span>Texto do CAPTCHA</span><span class="input-wrap"><input id="query-captcha-input" autocomplete="off" required placeholder="Digite os caracteres" /></span></label>

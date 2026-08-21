@@ -132,7 +132,7 @@ export class ConsigfacilPiaui {
   async prepareLogin() {
     const page = await this.ensurePage();
     this.pendingQuery = null;
-    this.setStatus("connecting", "Abrindo o ConsigFácil do Governo do Piauí.");
+    this.setStatus("connecting", `Abrindo o ConsigFácil de ${this.options.name}.`);
 
     const response = await page.goto(`${this.options.baseUrl}${LOGIN_PATH}`, {
       waitUntil: "domcontentloaded",
@@ -171,7 +171,7 @@ export class ConsigfacilPiaui {
     if (!this.page || this.page.isClosed() || this.state !== "awaiting_captcha") {
       throw new PortalError(
         "LOGIN_NOT_PREPARED",
-        "Inicie a conexão com o Governo do Piauí antes de enviar o CAPTCHA.",
+        `Inicie a conexão com ${this.options.name} antes de enviar o CAPTCHA.`,
         409,
       );
     }
@@ -247,7 +247,7 @@ export class ConsigfacilPiaui {
       this.setStatus("disconnected", "A sessão do ConsigFácil expirou.");
       throw new PortalError(
         "PORTAL_SESSION_EXPIRED",
-        "A sessão do Governo do Piauí expirou. Faça a conexão novamente.",
+        `A sessão de ${this.options.name} expirou. Faça a conexão novamente.`,
         409,
       );
     }
@@ -275,7 +275,7 @@ export class ConsigfacilPiaui {
     if (this.state !== "connected") {
       throw new PortalError(
         "PORTAL_NOT_CONNECTED",
-        "Conecte o Governo do Piauí antes de consultar.",
+        `Conecte ${this.options.name} antes de consultar.`,
         409,
       );
     }
@@ -309,7 +309,7 @@ export class ConsigfacilPiaui {
     if (!this.pendingQuery) {
       throw new PortalError(
         "QUERY_NOT_PREPARED",
-        "Prepare a consulta do Piauí antes de enviar o CAPTCHA.",
+        `Prepare a consulta de ${this.options.name} antes de enviar o CAPTCHA.`,
         409,
       );
     }
@@ -427,7 +427,7 @@ export class ConsigfacilPiaui {
         employments: [
           {
             name: rowData.name || "Servidor consultado",
-            agency: rowData.agency || "GOVERNO DO ESTADO DO PIAUÍ",
+            agency: rowData.agency || this.options.mockAgency || this.options.name.toUpperCase(),
             registration: rowData.registration || registration,
             referenceMonth: "Não informado",
             nextPayrollProcessing: "Não informado",
