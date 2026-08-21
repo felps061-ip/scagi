@@ -331,6 +331,8 @@ body { background: radial-gradient(circle at 82% 5%, rgba(218,174,60,.07), trans
 .mobile-lion img { width: 62px; height: 62px; object-fit: contain; }
 .mobile-brand > span:last-child { display: grid; gap: 3px; }
 .mobile-brand small { color: #9a6d0d; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; }
+.build-credit { margin: 18px 0 0; color: #9b927c; font-size: 9px; font-weight: 650; letter-spacing: .08em; text-align: center; }
+.sidebar-credit { margin-top: 16px; color: #5f5a4d; font-size: 8px; }
 
 @media (max-width: 900px) {
   .app-shell { grid-template-columns: 1fr; }
