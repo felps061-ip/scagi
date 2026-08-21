@@ -237,3 +237,108 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
   .integration-card .button { grid-column: 1 / -1; }
   .dialog-actions { flex-direction: column-reverse; }
 }
+
+/* Identidade visual Grupo Império */
+:root {
+  --navy-950: #080807;
+  --navy-900: #11110f;
+  --navy-800: #1b1a16;
+  --blue-700: #8b640f;
+  --blue-600: #a97b14;
+  --blue-500: #d9ad3c;
+  --cyan-400: #e9c75f;
+  --ink: #181711;
+  --muted: #716e65;
+  --line: #e7e1d4;
+  --background: #f6f4ef;
+  --success: #16a765;
+  --shadow: 0 18px 55px rgba(26, 22, 11, .09);
+}
+
+body { background: radial-gradient(circle at 82% 5%, rgba(218,174,60,.07), transparent 22%), var(--background); }
+.login-shell { background: #f4f1e9; }
+.login-story { background: radial-gradient(circle at 25% 28%, #242015 0, transparent 34%), linear-gradient(145deg,#070706 0%,#10100e 60%,#18150d 100%); }
+.login-story::before { content: ""; position: absolute; z-index: 0; width: min(680px,76vw); aspect-ratio: 1; right: -16%; top: 8%; background: url('/assets/imperio-lion.png') center/contain no-repeat; opacity: .055; }
+.story-content { width: min(680px,78%); }
+.brand-logo { display: block; object-fit: contain; object-position: left center; }
+.brand-logo-login { width: 168px; height: 50px; }
+.brand-product { padding-left: 17px; border-left: 1px solid rgba(229,190,79,.35); }
+.brand-product strong { color: #f5f2e8; font-size: 17px; letter-spacing: .2em; }
+.brand-product small { color: #c6b887; letter-spacing: .18em; }
+.story-copy { padding: 72px 0 35px; }
+.eyebrow { color: #b98718; }
+.story-copy .eyebrow { display: inline-flex; align-items: center; gap: 9px; color: #e2ba48; }
+.story-copy .eyebrow img { width: 16px; height: 16px; object-fit: contain; }
+.story-copy h1 { max-width: 650px; margin-top: 22px; font-size: clamp(46px,5.2vw,76px); }
+.story-copy h1 em { color: #e3b93e; font-style: normal; }
+.story-copy p { color: #c1bfb7; }
+.story-stats { border-color: rgba(226,186,72,.22); }
+.story-stats strong { color: #e6bd48; }
+.story-stats span { color: #918b7a; }
+.orb-one { border-color: rgba(222,180,56,.2); box-shadow: inset 0 0 90px rgba(218,174,60,.06); }
+.orb-two { background: rgba(218,174,60,.09); }
+.grid-lines { opacity: .025; }
+.login-panel { background: radial-gradient(circle at 72% 18%,rgba(218,174,60,.11),transparent 26%),#f7f5ef; }
+.login-card { width: min(430px,100%); padding: 40px; border: 1px solid #e4dccb; border-radius: 18px; background: rgba(255,255,255,.82); box-shadow: 0 24px 70px rgba(28,23,10,.1); backdrop-filter: blur(12px); }
+.eyebrow-blue { color: #9a6d0d; }
+.field > span:first-child { color: #49463e; }
+.input-wrap, .select-wrap { border-color: #ddd6c8; border-radius: 11px; }
+.input-wrap:focus-within, .select-wrap:focus-within { border-color: #c89725; box-shadow: 0 0 0 4px rgba(218,174,60,.13); }
+.field-help-link { color: #8b640f; border-color: #ead9aa; background: #fff9e9; }
+.field-help-link:hover { border-color: #d9b85e; background: #fff5d8; }
+.button { border-radius: 10px; }
+.button-primary { color: #15130d; background: linear-gradient(135deg,#f0d06e,#c79522); box-shadow: 0 10px 25px rgba(166,119,18,.22); }
+.button-primary:hover { box-shadow: 0 13px 30px rgba(166,119,18,.3); }
+.button-secondary { color: #4c473a; border-color: #ded7c8; }
+.app-shell { grid-template-columns: 258px 1fr; }
+.sidebar { color: #c8c1ae; background: linear-gradient(180deg,#080807,#11100d 58%,#0a0907); box-shadow: 10px 0 35px rgba(18,15,8,.08); }
+.sidebar::before { content: ""; position: absolute; width: 240px; height: 240px; left: 52px; top: 105px; background: url('/assets/imperio-lion.png') center/contain no-repeat; opacity: .025; pointer-events: none; }
+.sidebar-brand { position: relative; z-index: 1; height: 96px; gap: 13px; padding: 0 25px; border-color: rgba(226,186,72,.14); }
+.sidebar-lion { width: 48px; height: 48px; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(226,186,72,.28); border-radius: 13px; background: rgba(226,186,72,.07); }
+.sidebar-lion img { width: 63px; height: 63px; object-fit: contain; }
+.sidebar-brand strong { color: #fff; font-size: 20px; letter-spacing: .18em; }
+.sidebar-brand small { color: #d4b75f; letter-spacing: .22em; opacity: .78; }
+.main-nav { position: relative; z-index: 1; padding-top: 27px; }
+.nav-item { color: #9d9788; border-radius: 9px; }
+.nav-item:hover { color: #fff; background: rgba(226,186,72,.06); }
+.nav-item.active { color: #fff; background: linear-gradient(90deg,rgba(210,163,45,.22),rgba(210,163,45,.04)); box-shadow: inset 3px 0 #d4a832; }
+.nav-item.active svg { color: #e4bd4d; }
+.secure-card { border-color: rgba(226,186,72,.17); background: rgba(226,186,72,.05); }
+.secure-card strong { color: #d6ceb8; }
+.secure-card small { color: #77705f; }
+.secure-icon { color: #e4bd4d; background: rgba(226,186,72,.1); }
+.topbar { border-color: #e6e0d3; background: rgba(255,255,255,.9); backdrop-filter: blur(12px); }
+.breadcrumb b { color: #d5b65c; }
+.avatar { color: #17140c; background: linear-gradient(145deg,#f0d06e,#ba861a); box-shadow: 0 6px 17px rgba(166,119,18,.2); }
+.page-heading h2 { color: #17150f; }
+.portal-pill { border-color: #e0d9ca; box-shadow: 0 5px 18px rgba(24,20,10,.04); }
+.query-card, .result-card, .integration-card, .history-card, .info-card, .user-create-card { border-color: #e4ded1; border-radius: 15px; box-shadow: 0 9px 30px rgba(29,24,11,.045); }
+.section-icon { color: #94690d; background: linear-gradient(145deg,#fff7dd,#f4e5b5); }
+.empty-result { border-color: #dcd3bf; background: rgba(255,255,255,.5); }
+.empty-icon { color: #9b7a27; background: #eee7d8; }
+.spinner { border-color: #eee3c6; border-top-color: #bd881c; }
+.provision-title, .history-card th { background: #faf8f3; }
+.margin-item strong { color: #282318; }
+.integration-logo { color: #16130c; background: linear-gradient(145deg,#f0d06e,#b98314); box-shadow: 0 7px 18px rgba(169,123,20,.16); }
+.integration-logo-city { color: #fff; background: linear-gradient(145deg,#1c1b16,#4e462f); }
+.integration-logo-piaui { background: linear-gradient(145deg,#f0d45c,#48a85e); }
+.pool-badge { color: #80600f !important; background: #fff4ce; }
+.dialog { border: 1px solid #ded6c6; border-radius: 17px; }
+.dialog::backdrop { background: rgba(8,8,7,.76); }
+.toast { border-color: #ded7c9; }
+
+.mobile-lion { width: 48px; height: 48px; display: grid; place-items: center; overflow: hidden; border-radius: 13px; background: #0b0a08; }
+.mobile-lion img { width: 62px; height: 62px; object-fit: contain; }
+.mobile-brand > span:last-child { display: grid; gap: 3px; }
+.mobile-brand small { color: #9a6d0d; font-size: 9px; letter-spacing: .18em; text-transform: uppercase; }
+
+@media (max-width: 900px) {
+  .app-shell { grid-template-columns: 1fr; }
+  .login-card { padding: 32px; }
+  .mobile-brand { margin-bottom: 34px; }
+}
+
+@media (max-width: 560px) {
+  .login-panel { padding: 18px; }
+  .login-card { padding: 27px 22px; }
+}
