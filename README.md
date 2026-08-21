@@ -1,6 +1,6 @@
 # SCAGI
 
-MVP do **Sistema Centralizado de Averbadoras do Grupo Império**. O Portal do Consignado possui um pool de acessos para Estado de São Paulo/PMESP e uma sessão isolada para Prefeitura de São Paulo. Os portais ConsigFácil atendem Piauí e Pernambuco em sessões independentes.
+MVP do **Sistema Centralizado de Averbadoras do Grupo Império**. O Portal do Consignado possui um pool de acessos para Estado de São Paulo/PMESP e uma sessão isolada para Prefeitura de São Paulo. Os portais ConsigFácil atendem Piauí, Pernambuco e Maranhão em sessões independentes, e o Portal de Consignação atende o Governo de Rondônia.
 
 ## O que já está implementado
 
@@ -9,6 +9,9 @@ MVP do **Sistema Centralizado de Averbadoras do Grupo Império**. O Portal do Co
 - conexões dos portais compartilhadas no servidor entre todos os vendedores;
 - seleção da averbadora e entrada de CPF com validação;
 - consulta dos governos do Piauí e de Pernambuco por matrícula e CPF, removendo automaticamente hífen e pontuação da matrícula;
+- consulta do Governo do Maranhão por matrícula e CPF, sem atalho para portal da transparência;
+- consulta do Governo de Rondônia somente por CPF, com pensionista definido como **Não**;
+- apresentação própria para servidores de Rondônia com uma matrícula ou uma tabela quando houver várias matrículas;
 - modo de demonstração sem acesso a dados reais;
 - integração real via navegador controlado pelo backend;
 - CAPTCHA com resolução humana, sem automação ou contorno, inclusive nas consultas dos portais ConsigFácil;
@@ -44,10 +47,10 @@ Para testar uma consulta, use um CPF matematicamente válido, por exemplo `529.9
 
 1. Copie `.env.example` para `.env`.
 2. Defina uma senha forte para o SCAGI e uma chave aleatória com pelo menos 32 caracteres.
-3. Defina `PORTAL_MODE=real` e preencha as credenciais dos dois acessos estaduais de São Paulo, do acesso municipal, do Governo do Piauí e do Governo de Pernambuco.
+3. Defina `PORTAL_MODE=real` e preencha as credenciais dos dois acessos estaduais de São Paulo, do acesso municipal, dos governos do Piauí, de Pernambuco, de Rondônia e do Maranhão.
 4. Instale as dependências: `npm install`.
 5. Mantenha `PORTAL_BROWSER_CHANNEL=chrome` se o Google Chrome estiver instalado. Para usar o Chromium do Playwright, deixe a variável vazia e execute `npx playwright install chromium`.
-6. Inicie com `npm start`, entre no SCAGI, abra **Integrações** e conclua o CAPTCHA de cada acesso. Os portais ConsigFácil solicitarão um novo CAPTCHA quando uma consulta for preparada.
+6. Inicie com `npm start`, entre no SCAGI e abra **Integrações**. Conclua o CAPTCHA nos acessos que o solicitarem; Rondônia possui login direto e os portais ConsigFácil solicitarão um novo CAPTCHA quando uma consulta for preparada.
 
 O arquivo `.env` é ignorado pelo Git. Não coloque credenciais em arquivos versionados nem no código-fonte.
 
@@ -59,6 +62,6 @@ npm test
 
 ## Arquitetura do primeiro MVP
 
-O servidor Node entrega a interface, autentica o operador e mantém uma sessão de navegador isolada para cada credencial. Cada acesso possui sua própria fila porque os portais são stateful. Para Gov SP, o serviço escolhe os acessos conectados em round-robin; se somente um estiver conectado, ele recebe todas as consultas. O adaptador paulista evita IDs temporários gerados pelo Apache Wicket e usa seletores estáveis como `#cpfServidor` e `#painelMargensDisponiveis`. O adaptador ConsigFácil mantém matrícula, CPF e CAPTCHA da pesquisa na mesma sessão de cada estado e extrai os cartões **Margem Consignável** e **Margem Cartão**.
+O servidor Node entrega a interface, autentica o operador e mantém uma sessão de navegador isolada para cada credencial. Cada acesso possui sua própria fila porque os portais são stateful. Para Gov SP, o serviço escolhe os acessos conectados em round-robin; se somente um estiver conectado, ele recebe todas as consultas. O adaptador paulista evita IDs temporários gerados pelo Apache Wicket e usa seletores estáveis como `#cpfServidor` e `#painelMargensDisponiveis`. O adaptador ConsigFácil mantém matrícula, CPF e CAPTCHA da pesquisa na mesma sessão de cada estado e extrai os cartões **Margem Consignável** e **Margem Cartão**. O adaptador de Rondônia evita os IDs UUID gerados a cada carregamento, usando nomes de campos, textos de botões e a rota estável da Gestão; ele extrai o detalhamento individual ou a lista de matrículas sem obrigar o vendedor a escolher uma delas.
 
 O histórico e as sessões do SCAGI ainda ficam em memória. Antes de uso com múltiplos operadores em produção, o próximo passo é adicionar banco de dados, perfis/permissões, criptografia de credenciais em repouso, logs de auditoria duráveis, HTTPS e uma política de retenção compatível com a LGPD.

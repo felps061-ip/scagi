@@ -5,15 +5,16 @@ import { PortalError } from "./portals/errors.js";
 import { ConsigfacilPiaui } from "./portals/consigfacil-piaui.js";
 import { MockPortalDoConsignado } from "./portals/mock-portal.js";
 import { PortalDoConsignado } from "./portals/portal-do-consignado.js";
+import { RondoniaPortal } from "./portals/rondonia.js";
 
 const QUERY_CHALLENGE_TTL = 10 * 60 * 1000;
 
 export function createPortalService(config, dependencies = {}) {
   const createPortal = dependencies.createPortal || ((definition) => {
     if (config.portalMode !== "real") return new MockPortalDoConsignado(definition);
-    return definition.adapter === "consigfacil"
-      ? new ConsigfacilPiaui(definition)
-      : new PortalDoConsignado(definition);
+    if (definition.adapter === "consigfacil") return new ConsigfacilPiaui(definition);
+    if (definition.adapter === "rondonia") return new RondoniaPortal(definition);
+    return new PortalDoConsignado(definition);
   });
   const integrations = new Map(
     config.portals.map((definition) => [

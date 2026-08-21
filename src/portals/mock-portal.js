@@ -28,24 +28,45 @@ export class MockPortalDoConsignado {
   async queryMargin(cpf, parameters = {}) {
     await new Promise((resolve) => setTimeout(resolve, this.options.mockDelay ?? 650));
     const isConsigfacil = this.options.adapter === "consigfacil";
+    const isRondonia = this.options.adapter === "rondonia";
     return {
       portal: this.options.queryPortalId,
       connectionId: this.options.id,
       cpf: formatCpf(cpf),
       queriedAt: new Date().toISOString(),
       source: "mock",
+      ...(isRondonia ? { view: "single" } : {}),
       employments: [
         {
           name: "CLIENTE DE DEMONSTRAÇÃO",
           agency: this.options.mockAgency,
-          registration: isConsigfacil ? parameters.registration || "2148609" : "000000",
+          registration: isConsigfacil
+            ? parameters.registration || "2148609"
+            : isRondonia
+              ? "300000000-0"
+              : "000000",
           referenceMonth: new Intl.DateTimeFormat("pt-BR", {
             month: "2-digit",
             year: "numeric",
           }).format(new Date()),
           nextPayrollProcessing: "Não informado",
-          provision: isConsigfacil ? "Margens disponíveis" : "Provimento 1",
-          margins: isConsigfacil
+          provision: isConsigfacil || isRondonia ? "Margens disponíveis" : "Provimento 1",
+          ...(isRondonia
+            ? {
+                details: {
+                  cargo: "CARGO DE DEMONSTRAÇÃO",
+                  lotacao: "ÓRGÃO DE DEMONSTRAÇÃO",
+                  classificacao: "SERVIDOR",
+                },
+              }
+            : {}),
+          margins: isRondonia
+            ? [
+                { product: "MARGEM DISPONÍVEL", value: "Sem Margem" },
+                { product: "MARGEM CARTÃO", value: "Sem Margem" },
+                { product: "MARGEM CARTÃO BENEFÍCIO", value: "Sem Margem" },
+              ]
+            : isConsigfacil
             ? [
                 { product: "MARGEM CONSIGNÁVEL", value: "226,87" },
                 { product: "MARGEM CARTÃO", value: "194,40" },

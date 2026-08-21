@@ -48,6 +48,25 @@ const portalDefinitions = [
     mockAgency: "GOVERNO DO ESTADO DE PERNAMBUCO",
     mockDelay: 0,
   },
+  {
+    id: "rondonia-primary",
+    adapter: "rondonia",
+    queryPortalId: "rondonia",
+    name: "Governo de Rondônia",
+    governments: ["Rondônia"],
+    mockAgency: "GOVERNO DO ESTADO DE RONDÔNIA",
+    mockDelay: 0,
+  },
+  {
+    id: "maranhao-primary",
+    adapter: "consigfacil",
+    queryPortalId: "maranhao",
+    name: "Governo do Maranhão",
+    governments: ["Maranhão"],
+    queryFields: ["registration"],
+    mockAgency: "GOVERNO DO ESTADO DO MARANHÃO",
+    mockDelay: 0,
+  },
 ];
 
 test("alterna consultas Gov SP entre os acessos conectados", async () => {
@@ -59,6 +78,8 @@ test("alterna consultas Gov SP entre os acessos conectados", async () => {
     "prefeitura-sao-paulo-primary",
     "piaui-primary",
     "pernambuco-primary",
+    "rondonia-primary",
+    "maranhao-primary",
   ]);
 
   const first = await service.query("portal-consignado", "52998224725", "admin");
@@ -116,6 +137,35 @@ test("mantém Pernambuco em sessão própria com matrícula obrigatória", async
   assert.equal(result.connectionId, "pernambuco-primary");
   assert.equal(result.employments[0].agency, "GOVERNO DO ESTADO DE PERNAMBUCO");
   assert.equal(result.employments[0].registration, "9876543");
+  await service.close();
+});
+
+test("consulta Rondônia somente com CPF e retorna os três tipos de margem", async () => {
+  const service = createPortalService({ portalMode: "mock", portals: portalDefinitions });
+  assert.deepEqual(service.requirements("rondonia"), { fields: [] });
+  const result = await service.query("rondonia", "52998224725", "admin");
+  assert.equal(result.connectionId, "rondonia-primary");
+  assert.equal(result.view, "single");
+  assert.equal(result.employments[0].agency, "GOVERNO DO ESTADO DE RONDÔNIA");
+  assert.deepEqual(
+    result.employments[0].margins.map(({ product }) => product),
+    ["MARGEM DISPONÍVEL", "MARGEM CARTÃO", "MARGEM CARTÃO BENEFÍCIO"],
+  );
+  await service.close();
+});
+
+test("mantém Maranhão em sessão ConsigFácil própria com matrícula obrigatória", async () => {
+  const service = createPortalService({ portalMode: "mock", portals: portalDefinitions });
+  assert.deepEqual(service.requirements("maranhao"), { fields: ["registration"] });
+  const result = await service.query(
+    "maranhao",
+    "52998224725",
+    "admin",
+    { registration: "1234567" },
+  );
+  assert.equal(result.connectionId, "maranhao-primary");
+  assert.equal(result.employments[0].agency, "GOVERNO DO ESTADO DO MARANHÃO");
+  assert.equal(result.employments[0].registration, "1234567");
   await service.close();
 });
 

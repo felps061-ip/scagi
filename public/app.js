@@ -8,16 +8,24 @@ const state = {
   portalMode: "mock",
 };
 
-const registrationPortalMetadata = {
+const portalMetadata = {
   piaui: {
     code: "PI",
     flagClass: "flag-pi",
+    requiresRegistration: true,
     transparencyUrl: "https://transparencia.pi.gov.br/servidores",
   },
   pernambuco: {
     code: "PE",
     flagClass: "flag-pe",
+    requiresRegistration: true,
     transparencyUrl: "https://transparencia.pe.gov.br/recursos-humanos/remuneracoes/",
+  },
+  rondonia: { code: "RO", flagClass: "flag-ro" },
+  maranhao: {
+    code: "MA",
+    flagClass: "flag-ma",
+    requiresRegistration: true,
   },
 };
 
@@ -85,8 +93,8 @@ function selectedConnections() {
 }
 
 function updateQueryFields() {
-  const metadata = registrationPortalMetadata[$("#portal-select").value];
-  const requiresRegistration = Boolean(metadata);
+  const metadata = portalMetadata[$("#portal-select").value];
+  const requiresRegistration = Boolean(metadata?.requiresRegistration);
   const registrationField = $("#registration-field");
   const registrationInput = $("#registration-input");
   registrationField.hidden = !requiresRegistration;
@@ -95,7 +103,9 @@ function updateQueryFields() {
   const flag = $("#portal-flag");
   flag.textContent = metadata?.code || "SP";
   flag.className = `government-flag ${metadata?.flagClass || "flag-sp"}`;
-  if (metadata) $("#registration-help-link").href = metadata.transparencyUrl;
+  const registrationHelpLink = $("#registration-help-link");
+  registrationHelpLink.hidden = !metadata?.transparencyUrl;
+  if (metadata?.transparencyUrl) registrationHelpLink.href = metadata.transparencyUrl;
 }
 
 function renderSelectedPortal() {
@@ -182,19 +192,68 @@ function escapeHtml(value) {
 }
 
 function renderResult(result) {
+  if (result.view === "multiple" || result.employments.length > 1) {
+    renderMultipleResult(result);
+    return;
+  }
   const employment = result.employments[0];
   $("#result-name").textContent = employment.name;
-  $("#result-meta").textContent = `${employment.agency} · Identificação ${employment.registration} · Próxima folha ${employment.nextPayrollProcessing}`;
+  $("#result-meta").textContent = employment.details
+    ? `${employment.agency} · Matrícula ${employment.registration}`
+    : `${employment.agency} · Identificação ${employment.registration} · Próxima folha ${employment.nextPayrollProcessing}`;
   $("#result-cpf").textContent = result.cpf;
   $("#result-provision").textContent = employment.provision;
   $("#result-reference").textContent = `Referência ${employment.referenceMonth}`;
   $("#result-time").textContent = `Consultado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(result.queriedAt))}`;
+  const details = employment.details || {};
+  const detailItems = [
+    ["Cargo", details.cargo],
+    ["Lotação", details.lotacao],
+    ["Classificação", details.classificacao],
+  ].filter(([, value]) => value && value !== "Não informado");
+  $("#result-details").hidden = detailItems.length === 0;
+  $("#result-details").innerHTML = detailItems
+    .map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`)
+    .join("");
   $("#margin-grid").innerHTML = employment.margins
-    .map((margin) => `<div class="margin-item"><span>${escapeHtml(margin.product)}</span><strong>${escapeHtml(margin.value)}</strong></div>`)
+    .map((margin) => {
+      const isCurrency = /^\s*(?:R\$\s*)?-?[\d.]+,\d{2}\s*$/.test(margin.value);
+      return `<div class="margin-item"><span>${escapeHtml(margin.product)}</span><strong class="${isCurrency ? "" : "non-currency"}">${escapeHtml(margin.value)}</strong></div>`;
+    })
     .join("");
   $("#empty-result").hidden = true;
   $("#loading-result").hidden = true;
+  $("#multiple-result-card").hidden = true;
   $("#result-card").hidden = false;
+}
+
+function renderMultipleResult(result) {
+  const marginValue = (employment, product) => employment.margins.find(
+    (margin) => margin.product === product,
+  )?.value || "Não informado";
+  $("#multiple-result-cpf").textContent = result.cpf;
+  $("#multiple-result-time").textContent = `Consultado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(result.queriedAt))}`;
+  $("#multiple-result-body").innerHTML = result.employments.map((employment) => `<tr>
+    <td><strong>${escapeHtml(employment.registration)}</strong></td>
+    <td>${escapeHtml(employment.name)}</td>
+    <td>${escapeHtml(employment.cpf || result.cpf)}</td>
+    <td>${escapeHtml(employment.sequence || "—")}</td>
+    <td>${escapeHtml(marginValue(employment, "MARGEM DISPONÍVEL"))}</td>
+    <td>${escapeHtml(marginValue(employment, "MARGEM CARTÃO"))}</td>
+  </tr>`).join("");
+  $("#empty-result").hidden = true;
+  $("#loading-result").hidden = true;
+  $("#result-card").hidden = true;
+  $("#multiple-result-card").hidden = false;
+}
+
+function resetQueryResult() {
+  $("#cpf-input").value = "";
+  $("#registration-input").value = "";
+  $("#result-card").hidden = true;
+  $("#multiple-result-card").hidden = true;
+  $("#empty-result").hidden = false;
+  $("#cpf-input").focus();
 }
 
 async function loadHistory() {
@@ -309,6 +368,7 @@ $("#query-form").addEventListener("submit", async (event) => {
   $("#query-button").disabled = true;
   $("#empty-result").hidden = true;
   $("#result-card").hidden = true;
+  $("#multiple-result-card").hidden = true;
   $("#loading-result").hidden = false;
   try {
     const result = await api("/api/margins/query", {
@@ -342,13 +402,8 @@ $("#query-form").addEventListener("submit", async (event) => {
   }
 });
 
-$("#new-query-button").addEventListener("click", () => {
-  $("#cpf-input").value = "";
-  $("#registration-input").value = "";
-  $("#result-card").hidden = true;
-  $("#empty-result").hidden = false;
-  $("#cpf-input").focus();
-});
+$("#new-query-button").addEventListener("click", resetQueryResult);
+$("#new-multiple-query-button").addEventListener("click", resetQueryResult);
 
 $("#create-user-form").addEventListener("submit", async (event) => {
   event.preventDefault();

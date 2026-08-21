@@ -128,6 +128,8 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .flag-sp { background: linear-gradient(135deg,#111 0 45%,#fff 45% 55%,#d52a32 55%); }
 .flag-pi { color: #153a22; background: linear-gradient(180deg,#22964b 0 50%,#f1d33b 50%); text-shadow: none; }
 .flag-pe { background: linear-gradient(135deg,#173f8f 0 48%,#fff 48% 58%,#e73838 58%); }
+.flag-ro { color: #173b25; background: linear-gradient(180deg,#1c6ca1 0 44%,#f2d34a 44% 57%,#248b4c 57%); text-shadow: none; }
+.flag-ma { background: linear-gradient(180deg,#d72b35 0 25%,#fff 25% 50%,#111 50% 75%,#fff 75%); }
 .input-large { min-height: 52px; }
 .query-button { min-height: 52px; padding: 0 25px; }
 .query-connect-button { min-height: 38px; padding: 0 15px; font-size: 11px; }
@@ -147,6 +149,10 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .success-badge { display: inline-block; margin-bottom: 10px; color: var(--success); font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .result-head h3 { font-size: 19px; }
 .result-head p { margin: 0; color: var(--muted); font-size: 11px; }
+.result-details { display: grid; grid-template-columns: repeat(3,1fr); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
+.result-details > div { display: grid; gap: 5px; padding: 15px 28px; background: #fff; }
+.result-details span { color: #8995a5; font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+.result-details strong { color: #33455a; font-size: 11px; }
 .result-cpf { display: grid; gap: 5px; text-align: right; }
 .result-cpf span { color: #8995a5; font-size: 9px; font-weight: 750; letter-spacing: .1em; }
 .result-cpf strong { font-size: 17px; }
@@ -161,8 +167,14 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .margin-item span { display: block; min-height: 29px; color: #77869a; font-size: 9px; font-weight: 750; line-height: 1.5; text-transform: uppercase; letter-spacing: .07em; }
 .margin-item strong { display: block; margin-top: 7px; color: #163650; font-size: 25px; letter-spacing: -.03em; }
 .margin-item strong::before { content: "R$ "; color: #76899a; font-size: 11px; font-weight: 600; }
+.margin-item strong.non-currency::before { content: none; }
 .result-footer { display: flex; align-items: center; justify-content: space-between; padding: 17px 28px; }
 .result-footer span { color: #91a0b1; font-size: 10px; }
+.multiple-registration-table { overflow-x: auto; }
+.multiple-registration-table table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 11px; }
+.multiple-registration-table th { padding: 13px 17px; color: #52657a; background: #f1f8f7; text-align: left; text-transform: uppercase; font-size: 9px; letter-spacing: .06em; }
+.multiple-registration-table td { padding: 15px 17px; border-top: 1px solid var(--line); color: #405269; }
+.multiple-registration-table tbody tr:nth-child(even) td { background: #fafbfc; }
 .integrations-list { display: grid; gap: 14px; }
 .integration-group-heading { display: flex; align-items: center; justify-content: space-between; padding: 2px 3px; }
 .integration-group-heading > div { display: grid; gap: 3px; }
@@ -175,6 +187,8 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .integration-logo-city { background: linear-gradient(145deg,#123f35,#0b9f72); }
 .integration-logo-piaui { color: #173b25; background: linear-gradient(145deg,#f4d83e,#34a853); }
 .integration-logo-pernambuco { color: #fff; background: linear-gradient(145deg,#173f8f,#e73838); }
+.integration-logo-rondonia { color: #fff; background: linear-gradient(145deg,#1c6ca1,#248b4c); }
+.integration-logo-maranhao { color: #fff; background: linear-gradient(145deg,#173f8f,#d72b35); }
 .integration-info { min-width: 0; }
 .inline-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; color: var(--muted); font-size: 10px; }
 .info-card { margin-top: 18px; padding: 20px 23px; }
@@ -228,6 +242,7 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
   .topbar { padding: 0 20px; }
   .view { padding: 35px 22px 60px; }
   .margin-grid { grid-template-columns: 1fr; }
+  .result-details { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {

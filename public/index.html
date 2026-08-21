@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#090908" />
     <title>SCAGI · Grupo Império</title>
-    <link rel="stylesheet" href="/styles.css?v=8" />
-    <script src="/app.js?v=5" type="module"></script>
+    <link rel="stylesheet" href="/styles.css?v=10" />
+    <script src="/app.js?v=7" type="module"></script>
   </head>
   <body>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
@@ -24,7 +24,7 @@
             <p>Centralize margens consignáveis com a segurança, a agilidade e a excelência que fazem parte do nosso império.</p>
           </div>
           <div class="story-stats">
-            <div><strong>05</strong><span>acessos integrados</span></div>
+            <div><strong>07</strong><span>acessos integrados</span></div>
             <div><strong>100%</strong><span>consulta centralizada</span></div>
           </div>
         </div>
@@ -150,6 +150,8 @@
                     <option value="prefeitura-sao-paulo">Prefeitura de São Paulo · Portal do Consignado</option>
                     <option value="piaui">Governo do Piauí · ConsigFácil</option>
                     <option value="pernambuco">Pernambuco · PEConsig</option>
+                    <option value="rondonia">Rondônia · Portal de Consignação</option>
+                    <option value="maranhao">Maranhão · ConsigFácil</option>
                   </select>
                   <span id="portal-flag" class="government-flag flag-sp" aria-hidden="true">SP</span>
                 </span>
@@ -204,6 +206,7 @@
               </div>
               <div class="result-cpf"><span>CPF CONSULTADO</span><strong id="result-cpf">—</strong></div>
             </div>
+            <div id="result-details" class="result-details" hidden></div>
             <div class="provision-title">
               <div><span class="section-icon small">R$</span><div><strong id="result-provision">Provimento 1</strong><small>Margem disponível · Total</small></div></div>
               <span id="result-reference" class="reference-chip">Referência —</span>
@@ -213,6 +216,20 @@
               <span id="result-time">Consultado agora</span>
               <button id="new-query-button" class="button button-secondary" type="button">Nova consulta</button>
             </div>
+          </section>
+
+          <section id="multiple-result-card" class="result-card multiple-result-card" hidden>
+            <div class="result-head">
+              <div><span class="success-badge">✓ Consulta concluída</span><h3>Matrículas encontradas</h3><p>O servidor possui mais de uma matrícula no portal de Rondônia.</p></div>
+              <div class="result-cpf"><span>CPF CONSULTADO</span><strong id="multiple-result-cpf">—</strong></div>
+            </div>
+            <div class="multiple-registration-table">
+              <table>
+                <thead><tr><th>Matrícula</th><th>Nome</th><th>CPF</th><th>Seq.</th><th>Margem disponível</th><th>Margem Cartão</th></tr></thead>
+                <tbody id="multiple-result-body"></tbody>
+              </table>
+            </div>
+            <div class="result-footer"><span id="multiple-result-time">Consultado agora</span><button id="new-multiple-query-button" class="button button-secondary" type="button">Nova consulta</button></div>
           </section>
         </section>
 
@@ -247,6 +264,18 @@
               <div class="integration-logo integration-logo-pernambuco">PE</div>
               <div class="integration-info"><h3>Governo de Pernambuco</h3><p>PEConsig · Governo de Pernambuco</p><span class="inline-status" data-integration-status="pernambuco-primary">Carregando…</span></div>
               <button class="button button-primary connect-button" data-connect-portal="pernambuco-primary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo de Rondônia</strong><span>Acesso estadual independente</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-rondonia">RO</div>
+              <div class="integration-info"><h3>Governo de Rondônia</h3><p>Portal de Consignação · Estado de Rondônia</p><span class="inline-status" data-integration-status="rondonia-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="rondonia-primary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo do Maranhão</strong><span>Acesso estadual independente</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-maranhao">MA</div>
+              <div class="integration-info"><h3>Governo do Maranhão</h3><p>ConsigFácil · Governo do Maranhão</p><span class="inline-status" data-integration-status="maranhao-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="maranhao-primary" type="button">Conectar acesso</button>
             </div>
           </div>
           <div class="info-card"><strong>Por que existe um CAPTCHA?</strong><p>Os portais exigem confirmação humana. O SCAGI mantém as credenciais no servidor e solicita apenas a leitura da imagem. Nos portais ConsigFácil, há uma confirmação no login e outra em cada consulta.</p></div>
