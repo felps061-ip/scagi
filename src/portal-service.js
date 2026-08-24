@@ -6,6 +6,7 @@ import { ConsigfacilPiaui } from "./portals/consigfacil-piaui.js";
 import { MockPortalDoConsignado } from "./portals/mock-portal.js";
 import { PortalDoConsignado } from "./portals/portal-do-consignado.js";
 import { RondoniaPortal } from "./portals/rondonia.js";
+import { RoraimaPortal } from "./portals/roraima.js";
 
 const QUERY_CHALLENGE_TTL = 10 * 60 * 1000;
 
@@ -14,6 +15,7 @@ export function createPortalService(config, dependencies = {}) {
     if (config.portalMode !== "real") return new MockPortalDoConsignado(definition);
     if (definition.adapter === "consigfacil") return new ConsigfacilPiaui(definition);
     if (definition.adapter === "rondonia") return new RondoniaPortal(definition);
+    if (definition.adapter === "roraima") return new RoraimaPortal(definition);
     return new PortalDoConsignado(definition);
   });
   const integrations = new Map(

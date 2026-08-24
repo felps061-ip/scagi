@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#090908" />
     <title>SCAGI · Grupo Império</title>
-    <link rel="stylesheet" href="/styles.css?v=11" />
-    <script src="/app.js?v=8" type="module"></script>
+    <link rel="stylesheet" href="/styles.css?v=12" />
+    <script src="/app.js?v=9" type="module"></script>
   </head>
   <body>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
@@ -24,7 +24,7 @@
             <p>Centralize margens consignáveis com a segurança, a agilidade e a excelência que fazem parte do nosso império.</p>
           </div>
           <div class="story-stats">
-            <div><strong>07</strong><span>acessos integrados</span></div>
+            <div><strong>08</strong><span>acessos integrados</span></div>
             <div><strong>100%</strong><span>consulta centralizada</span></div>
           </div>
         </div>
@@ -152,6 +152,7 @@
                     <option value="pernambuco">Pernambuco · PEConsig</option>
                     <option value="rondonia">Rondônia · Portal de Consignação</option>
                     <option value="maranhao">Maranhão · ConsigFácil</option>
+                    <option value="roraima">Roraima · GridSoftware</option>
                   </select>
                   <span id="portal-flag" class="government-flag flag-sp" aria-hidden="true">SP</span>
                 </span>
@@ -164,6 +165,15 @@
                 <span class="input-wrap input-large">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h1M8 13h1M12 9h4M12 13h4" /></svg>
                   <input id="registration-input" inputmode="numeric" maxlength="31" autocomplete="off" placeholder="Ex.: 214860-9" />
+                </span>
+              </label>
+              <label id="company-field" class="field" hidden>
+                <span>Base do servidor</span>
+                <span class="select-wrap select-wrap-plain">
+                  <select id="company-select">
+                    <option value="sigrh" selected>SIGRH</option>
+                    <option value="sgg">SGG</option>
+                  </select>
                 </span>
               </label>
               <label class="field">
@@ -277,8 +287,14 @@
               <div class="integration-info"><h3>Governo do Maranhão</h3><p>ConsigFácil · Governo do Maranhão</p><span class="inline-status" data-integration-status="maranhao-primary">Carregando…</span></div>
               <button class="button button-primary connect-button" data-connect-portal="maranhao-primary" type="button">Conectar acesso</button>
             </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo de Roraima</strong><span>Acesso estadual com seleção SGG/SIGRH</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-roraima">RR</div>
+              <div class="integration-info"><h3>Governo de Roraima</h3><p>Consignado GridSoftware · SGG e SIGRH</p><span class="inline-status" data-integration-status="roraima-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="roraima-primary" type="button">Conectar acesso</button>
+            </div>
           </div>
-          <div class="info-card"><strong>Por que existe um CAPTCHA?</strong><p>Os portais exigem confirmação humana. O SCAGI mantém as credenciais no servidor e solicita apenas a leitura da imagem. Nos portais ConsigFácil, há uma confirmação no login e outra em cada consulta.</p></div>
+          <div class="info-card"><strong>Por que existe um CAPTCHA?</strong><p>Os portais exigem confirmação humana. O SCAGI mantém as credenciais no servidor e nunca contorna essa proteção. Nos portais ConsigFácil, a imagem é exibida no SCAGI; em Roraima, o operador marca o reCAPTCHA diretamente na janela oficial do portal.</p></div>
         </section>
 
         <section id="view-history" class="view" hidden>
@@ -313,11 +329,11 @@
     <dialog id="captcha-dialog" class="dialog">
       <form id="captcha-form" method="dialog">
         <div class="dialog-head"><div><span id="captcha-portal-name" class="eyebrow eyebrow-blue">PORTAL DO CONSIGNADO</span><h2>Confirmar acesso</h2></div><button id="close-dialog" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
-        <p>Digite os caracteres exibidos pelo portal. A imagem pertence à sessão segura mantida no servidor.</p>
-        <div class="captcha-image-wrap"><img id="captcha-image" alt="CAPTCHA do Portal do Consignado" /></div>
-        <label class="field"><span>Texto do CAPTCHA</span><span class="input-wrap"><input id="captcha-input" autocomplete="off" required placeholder="Digite os caracteres" /></span></label>
+        <p id="captcha-description">Digite os caracteres exibidos pelo portal. A imagem pertence à sessão segura mantida no servidor.</p>
+        <div id="captcha-image-wrap" class="captcha-image-wrap"><img id="captcha-image" alt="CAPTCHA do portal" /></div>
+        <label id="captcha-input-field" class="field"><span>Texto do CAPTCHA</span><span class="input-wrap"><input id="captcha-input" autocomplete="off" required placeholder="Digite os caracteres" /></span></label>
         <div id="captcha-error" class="form-error" role="alert" hidden></div>
-        <div class="dialog-actions"><button id="refresh-captcha" class="button button-secondary" type="button">Gerar outra imagem</button><button class="button button-primary" type="submit">Concluir conexão</button></div>
+        <div class="dialog-actions"><button id="refresh-captcha" class="button button-secondary" type="button">Gerar outra imagem</button><button id="captcha-submit-button" class="button button-primary" type="submit">Concluir conexão</button></div>
       </form>
     </dialog>
 

@@ -29,6 +29,7 @@ export class MockPortalDoConsignado {
     await new Promise((resolve) => setTimeout(resolve, this.options.mockDelay ?? 650));
     const isConsigfacil = this.options.adapter === "consigfacil";
     const isRondonia = this.options.adapter === "rondonia";
+    const isRoraima = this.options.adapter === "roraima";
     return {
       portal: this.options.queryPortalId,
       connectionId: this.options.id,
@@ -50,7 +51,11 @@ export class MockPortalDoConsignado {
             year: "numeric",
           }).format(new Date()),
           nextPayrollProcessing: "Não informado",
-          provision: isConsigfacil || isRondonia ? "Margens disponíveis" : "Provimento 1",
+          provision: isRoraima
+            ? `0810 - EMP. B. DAYCOVAL · ${(parameters.company || "sigrh").toUpperCase()}`
+            : isConsigfacil || isRondonia
+              ? "Margens disponíveis"
+              : "Provimento 1",
           ...(isRondonia
             ? {
                 details: {
@@ -60,7 +65,9 @@ export class MockPortalDoConsignado {
                 },
               }
             : {}),
-          margins: isRondonia
+          margins: isRoraima
+            ? [{ product: "MARGEM EMPRÉSTIMO", value: "0,00" }]
+            : isRondonia
             ? [
                 { product: "MARGEM DISPONÍVEL", value: "Sem Margem" },
                 { product: "MARGEM CARTÃO", value: "Sem Margem" },

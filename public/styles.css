@@ -130,6 +130,7 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .flag-pe { background: linear-gradient(135deg,#173f8f 0 48%,#fff 48% 58%,#e73838 58%); }
 .flag-ro { color: #173b25; background: linear-gradient(180deg,#1c6ca1 0 44%,#f2d34a 44% 57%,#248b4c 57%); text-shadow: none; }
 .flag-ma { background: linear-gradient(180deg,#d72b35 0 25%,#fff 25% 50%,#111 50% 75%,#fff 75%); }
+.flag-rr { color: #173b25; background: linear-gradient(180deg,#21884a 0 45%,#fff 45% 57%,#2463a0 57%); text-shadow: none; }
 .input-large { min-height: 52px; }
 .query-button { min-height: 52px; padding: 0 25px; }
 .query-connect-button { min-height: 38px; padding: 0 15px; font-size: 11px; }
@@ -189,6 +190,7 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .integration-logo-pernambuco { color: #fff; background: linear-gradient(145deg,#173f8f,#e73838); }
 .integration-logo-rondonia { color: #fff; background: linear-gradient(145deg,#1c6ca1,#248b4c); }
 .integration-logo-maranhao { color: #fff; background: linear-gradient(145deg,#173f8f,#d72b35); }
+.integration-logo-roraima { color: #fff; background: linear-gradient(145deg,#21884a,#2463a0); }
 .integration-info { min-width: 0; }
 .inline-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; color: var(--muted); font-size: 10px; }
 .info-card { margin-top: 18px; padding: 20px 23px; }

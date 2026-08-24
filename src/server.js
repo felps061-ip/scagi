@@ -265,6 +265,7 @@ const server = createServer(async (request, response) => {
         }
         const requirements = portals.requirements(body.portal);
         const registration = normalizeRegistration(body.registration);
+        const company = ["sgg", "sigrh"].includes(body.company) ? body.company : "sigrh";
         if (requirements.fields.includes("registration") && !registration) {
           return json(response, 400, {
             error: { code: "REGISTRATION_REQUIRED", message: "Informe a matrícula do servidor." },
@@ -277,7 +278,7 @@ const server = createServer(async (request, response) => {
             body.portal,
             cpf,
             authentication.session.username,
-            { registration },
+            { registration, company },
           ),
         );
       }

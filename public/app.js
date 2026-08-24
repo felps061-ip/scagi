@@ -6,6 +6,7 @@ const state = {
   activeQueryChallengeId: null,
   activeUsername: null,
   portalMode: "mock",
+  activeExternalCaptcha: false,
 };
 
 const portalMetadata = {
@@ -26,6 +27,11 @@ const portalMetadata = {
     code: "MA",
     flagClass: "flag-ma",
     requiresRegistration: true,
+  },
+  roraima: {
+    code: "RR",
+    flagClass: "flag-rr",
+    requiresCompany: true,
   },
 };
 
@@ -115,9 +121,12 @@ function updateQueryFields() {
   const requiresRegistration = Boolean(metadata?.requiresRegistration);
   const registrationField = $("#registration-field");
   const registrationInput = $("#registration-input");
+  const requiresCompany = Boolean(metadata?.requiresCompany);
+  const companyField = $("#company-field");
   registrationField.hidden = !requiresRegistration;
   registrationInput.required = requiresRegistration;
-  $(".query-grid").classList.toggle("with-registration", requiresRegistration);
+  companyField.hidden = !requiresCompany;
+  $(".query-grid").classList.toggle("with-registration", requiresRegistration || requiresCompany);
   const flag = $("#portal-flag");
   flag.textContent = metadata?.code || "SP";
   flag.className = `government-flag ${metadata?.flagClass || "flag-sp"}`;
@@ -317,9 +326,19 @@ async function startConnection(portalId) {
   });
   try {
     const status = await api(`/api/portals/${portalId}/connect`, { method: "POST" });
-    if (status.captchaImage) {
+    if (status.captchaImage || status.externalCaptcha) {
+      const externalCaptcha = Boolean(status.externalCaptcha);
+      state.activeExternalCaptcha = externalCaptcha;
       $("#captcha-portal-name").textContent = (portal?.name || "Portal do Consignado").toUpperCase();
-      $("#captcha-image").src = status.captchaImage;
+      $("#captcha-description").textContent = externalCaptcha
+        ? status.externalCaptchaMessage || "Conclua o código de segurança na janela oficial do portal e confirme aqui."
+        : "Digite os caracteres exibidos pelo portal. A imagem pertence à sessão segura mantida no servidor.";
+      $("#captcha-image-wrap").hidden = externalCaptcha;
+      $("#captcha-input-field").hidden = externalCaptcha;
+      $("#captcha-input").required = !externalCaptcha;
+      $("#refresh-captcha").textContent = externalCaptcha ? "Reabrir janela" : "Gerar outra imagem";
+      $("#captcha-submit-button").textContent = externalCaptcha ? "Já confirmei no portal" : "Concluir conexão";
+      if (status.captchaImage) $("#captcha-image").src = status.captchaImage;
       $("#captcha-input").value = "";
       $("#captcha-error").hidden = true;
       if (!$("#captcha-dialog").open) $("#captcha-dialog").showModal();
@@ -395,6 +414,7 @@ $("#query-form").addEventListener("submit", async (event) => {
         portal: $("#portal-select").value,
         cpf: $("#cpf-input").value,
         registration: $("#registration-input").value,
+        company: $("#company-select").value,
       }),
     });
     if (result.requiresCaptcha && result.challengeId) {
@@ -505,8 +525,11 @@ $("#captcha-form").addEventListener("submit", async (event) => {
     const portalId = state.activePortalId;
     const status = await api(`/api/portals/${portalId}/captcha`, {
       method: "POST",
-      body: JSON.stringify({ captcha: $("#captcha-input").value }),
+      body: JSON.stringify({
+        captcha: state.activeExternalCaptcha ? "confirmado-no-portal" : $("#captcha-input").value,
+      }),
     });
+    state.activeExternalCaptcha = false;
     $("#captcha-dialog").close();
     renderPortal({ ...state.portals.get(portalId), ...status });
     renderSelectedPortal();

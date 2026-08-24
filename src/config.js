@@ -143,6 +143,23 @@ export const config = {
       browserChannel: process.env.PORTAL_BROWSER_CHANNEL || "",
       headless: readBoolean(process.env.PLAYWRIGHT_HEADLESS, true),
     },
+    {
+      id: "roraima-primary",
+      adapter: "roraima",
+      queryPortalId: "roraima",
+      name: "Governo de Roraima",
+      governments: ["Roraima"],
+      mockAgency: "GOVERNO DO ESTADO DE RORAIMA",
+      baseUrl: "https://consignado.gridsoftware.com.br/grid",
+      loginPath: "/login.seam",
+      username: process.env.PORTAL_RORAIMA_USERNAME || "",
+      password: process.env.PORTAL_RORAIMA_PASSWORD || "",
+      usernameVariable: "PORTAL_RORAIMA_USERNAME",
+      passwordVariable: "PORTAL_RORAIMA_PASSWORD",
+      browserChannel: process.env.PORTAL_BROWSER_CHANNEL || "",
+      // O reCAPTCHA precisa ser marcado por uma pessoa na janela oficial do portal.
+      headless: false,
+    },
   ],
 };
 

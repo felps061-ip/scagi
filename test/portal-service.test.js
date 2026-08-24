@@ -67,6 +67,15 @@ const portalDefinitions = [
     mockAgency: "GOVERNO DO ESTADO DO MARANHÃO",
     mockDelay: 0,
   },
+  {
+    id: "roraima-primary",
+    adapter: "roraima",
+    queryPortalId: "roraima",
+    name: "Governo de Roraima",
+    governments: ["Roraima"],
+    mockAgency: "GOVERNO DO ESTADO DE RORAIMA",
+    mockDelay: 0,
+  },
 ];
 
 test("alterna consultas Gov SP entre os acessos conectados", async () => {
@@ -80,6 +89,7 @@ test("alterna consultas Gov SP entre os acessos conectados", async () => {
     "pernambuco-primary",
     "rondonia-primary",
     "maranhao-primary",
+    "roraima-primary",
   ]);
 
   const first = await service.query("portal-consignado", "52998224725", "admin");
@@ -166,6 +176,27 @@ test("mantém Maranhão em sessão ConsigFácil própria com matrícula obrigat�
   assert.equal(result.connectionId, "maranhao-primary");
   assert.equal(result.employments[0].agency, "GOVERNO DO ESTADO DO MARANHÃO");
   assert.equal(result.employments[0].registration, "1234567");
+  await service.close();
+});
+
+test("consulta Roraima por CPF com SIGRH padrão ou SGG selecionado", async () => {
+  const service = createPortalService({ portalMode: "mock", portals: portalDefinitions });
+  assert.deepEqual(service.requirements("roraima"), { fields: [] });
+
+  const defaultResult = await service.query("roraima", "52998224725", "admin");
+  assert.equal(defaultResult.connectionId, "roraima-primary");
+  assert.match(defaultResult.employments[0].provision, /SIGRH/);
+  assert.deepEqual(defaultResult.employments[0].margins, [
+    { product: "MARGEM EMPRÉSTIMO", value: "0,00" },
+  ]);
+
+  const sggResult = await service.query(
+    "roraima",
+    "52998224725",
+    "admin",
+    { company: "sgg" },
+  );
+  assert.match(sggResult.employments[0].provision, /SGG/);
   await service.close();
 });
 
