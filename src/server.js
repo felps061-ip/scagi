@@ -42,6 +42,7 @@ const contentTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".png": "image/png",
   ".svg": "image/svg+xml",
 };
 
@@ -316,7 +317,7 @@ const server = createServer(async (request, response) => {
     const status = error instanceof PortalError ? error.status : error.status || 500;
     const code = error instanceof PortalError ? error.code : "INTERNAL_ERROR";
     const message = status >= 500 && !(error instanceof PortalError)
-      ? "Ocorreu um erro interno no SCAGI."
+      ? "Não foi possível concluir a operação porque ocorreu uma falha inesperada no servidor. Tente novamente; se o problema persistir, informe o horário do erro ao suporte."
       : error.message;
     if (status >= 500) console.error(error);
     json(response, status, {
