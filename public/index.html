@@ -6,9 +6,10 @@
     <meta name="theme-color" content="#f7f3eb" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#090908" media="(prefers-color-scheme: dark)" />
     <title>SCAGI · Grupo Império</title>
-    <link rel="icon" href="/favicon.svg?v=1" type="image/svg+xml" />
-    <link rel="stylesheet" href="/styles.css?v=13" />
-    <script src="/app.js?v=9" type="module"></script>
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/imperio-favicon.png?v=1" />
+    <link rel="apple-touch-icon" href="/assets/imperio-favicon.png?v=1" />
+    <link rel="stylesheet" href="/styles.css?v=16" />
+    <script src="/app.js?v=12" type="module"></script>
   </head>
   <body>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
@@ -22,6 +23,7 @@
           </a>
           <div class="story-copy">
             <span class="eyebrow"><img src="/assets/imperio-star.png" alt="" /> TECNOLOGIA GRUPO IMPÉRIO</span>
+            <p class="scagi-meaning"><strong>SCAGI</strong><span>Sistema Centralizado de Averbadoras do Grupo Império</span></p>
             <h1>Uma consulta.<br /><em>Todos os portais.</em></h1>
             <p>Centralize margens consignáveis com a segurança, a agilidade e a excelência que fazem parte do nosso império.</p>
           </div>
@@ -207,6 +209,18 @@
           <section id="loading-result" class="loading-card" hidden>
             <span class="spinner"></span>
             <div><h3>Consultando o portal</h3><p>Isso pode levar alguns segundos. Não feche esta página.</p></div>
+          </section>
+
+          <section id="query-error-result" class="query-error-card" role="alert" hidden>
+            <span class="query-error-icon" aria-hidden="true">!</span>
+            <span class="eyebrow">CONSULTA NÃO CONCLUÍDA</span>
+            <h3 id="query-error-title">Não foi possível consultar o cliente</h3>
+            <p id="query-error-message">Confira os dados informados e tente novamente.</p>
+            <div id="query-error-action" class="query-error-action"></div>
+            <div class="query-error-buttons">
+              <button id="query-error-retry" class="button button-primary" type="button">Tentar novamente</button>
+              <button id="query-error-integrations" class="button button-secondary" type="button" hidden>Ver integrações</button>
+            </div>
           </section>
 
           <section id="result-card" class="result-card" hidden>
