@@ -111,21 +111,20 @@ export class PortalDoConsignado {
       timeout: 30_000,
     });
 
-    let usernameVisible = await page
-      .locator("#username")
-      .isVisible()
-      .catch(() => false);
-    if (!usernameVisible) {
-      const administrativeLoginTab = page.getByText("Login Administrativo", { exact: true }).first();
-      if (await administrativeLoginTab.isVisible().catch(() => false)) {
-        await administrativeLoginTab.click();
-        await page
-          .locator("#username")
-          .waitFor({ state: "visible", timeout: 15_000 })
-          .catch(() => {});
-        usernameVisible = await page.locator("#username").isVisible().catch(() => false);
-      }
+    // A tela de servidor também possui um #username visível. Sempre selecione
+    // explicitamente o login administrativo antes de preencher a credencial da
+    // consignatária; caso contrário o portal recebe o CPF no formulário errado.
+    const administrativeLoginTab = page.getByText("Login Administrativo", { exact: true }).first();
+    if (await administrativeLoginTab.isVisible().catch(() => false)) {
+      await administrativeLoginTab.click();
+      await page.waitForTimeout(500);
     }
+
+    await page
+      .locator("#username")
+      .waitFor({ state: "visible", timeout: 15_000 })
+      .catch(() => {});
+    const usernameVisible = await page.locator("#username").isVisible().catch(() => false);
 
     if (!usernameVisible) {
       const pageSummary = await page
