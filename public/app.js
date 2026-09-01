@@ -64,12 +64,67 @@ async function api(path, options = {}) {
   return payload;
 }
 
-function showToast(message, type = "error") {
+function showToast(message, type = "error", detail = "") {
   const toast = document.createElement("div");
   toast.className = `toast ${type}`;
-  toast.textContent = message;
+  if (detail) {
+    const title = document.createElement("strong");
+    const description = document.createElement("span");
+    title.textContent = message;
+    description.textContent = detail;
+    toast.append(title, description);
+  } else {
+    toast.textContent = message;
+  }
   $("#toast-region").append(toast);
   setTimeout(() => toast.remove(), 4200);
+}
+
+function describeError(error, context = "operation") {
+  const descriptions = {
+    INVALID_CPF: ["CPF inválido", "O CPF informado está incompleto ou possui dígitos inválidos.", "Confira o CPF do cliente."],
+    REGISTRATION_REQUIRED: ["Matrícula obrigatória", "Este portal exige a matrícula do servidor para realizar a consulta.", "Informe a matrícula e tente novamente."],
+    INVALID_PORTAL: ["Portal inválido", "A averbadora selecionada não está disponível.", "Selecione outro portal."],
+    PORTAL_NOT_CONNECTED: ["Portal não conectado", "A consulta não pode começar porque não existe um acesso conectado para essa averbadora.", "Abra Integrações e conecte o acesso."],
+    PORTAL_SESSION_EXPIRED: ["Sessão do portal expirada", "O portal encerrou a sessão utilizada pelo SCAGI.", "Reconecte o acesso em Integrações."],
+    PORTAL_BUSY: ["Portal ocupado", "Este acesso está finalizando outra consulta ou aguardando uma confirmação.", "Aguarde alguns instantes e tente novamente."],
+    MARGIN_NOT_FOUND: ["Margem não encontrada", "O portal não retornou uma margem para os dados informados.", "Confira CPF, matrícula e base selecionada."],
+    PORTAL_LOGIN_FAILED: ["Falha no acesso ao portal", "O portal recusou ou não concluiu a autenticação.", "Confira a conexão, o CAPTCHA e as credenciais cadastradas."],
+    CAPTCHA_REQUIRED: ["Confirmação de segurança pendente", "O portal ainda aguarda a confirmação do CAPTCHA.", "Conclua a confirmação e tente novamente."],
+    CAPTCHA_REJECTED: ["Código de segurança recusado", "O CAPTCHA informado não foi aceito ou expirou.", "Gere outro código e tente novamente."],
+    QUERY_CHALLENGE_INVALID: ["Confirmação expirada", "A confirmação desta consulta não é mais válida.", "Inicie uma nova consulta."],
+    MARGIN_CODE_NOT_FOUND: ["Convênio indisponível", "O portal não disponibilizou o código de margem necessário para este servidor.", "Confirme o vínculo no portal responsável."],
+    PORTAL_CPF_FILL_FAILED: ["CPF não aceito pelo portal", "O portal apagou ou recusou o CPF informado.", "Confira o CPF e tente novamente."],
+    USER_EXISTS: ["Usuário já existente", "Já existe um acesso com esse nome de usuário.", "Escolha outro nome."],
+    WEAK_PASSWORD: ["Senha não aceita", "A senha não atende aos requisitos mínimos de segurança.", "Use pelo menos 8 caracteres."],
+    INTERNAL_ERROR: ["Falha inesperada no SCAGI", "O servidor não conseguiu concluir a operação.", "Tente novamente. Se persistir, informe o horário do erro ao suporte."],
+  };
+  if (descriptions[error.code]) return descriptions[error.code];
+  if (error.status === 401) return ["Sessão encerrada", "Seu acesso ao SCAGI expirou.", "Entre novamente para continuar."];
+  if (error.status >= 500) return ["Portal temporariamente indisponível", error.message || "O portal não respondeu como esperado.", "Aguarde alguns minutos e tente novamente."];
+  return [context === "query" ? "Não foi possível consultar o cliente" : "Não foi possível concluir", error.message || "A operação não pôde ser concluída.", "Confira os dados e tente novamente."];
+}
+
+function showErrorToast(error) {
+  const [title, reason, action] = describeError(error);
+  showToast(title, "error", `${reason} ${action}`);
+}
+
+function hideQueryError() {
+  $("#query-error-result").hidden = true;
+}
+
+function showQueryError(error) {
+  const [title, reason, action] = describeError(error, "query");
+  $("#query-error-title").textContent = title;
+  $("#query-error-message").textContent = reason;
+  $("#query-error-action").textContent = action;
+  $("#query-error-integrations").hidden = !["PORTAL_NOT_CONNECTED", "PORTAL_SESSION_EXPIRED", "PORTAL_LOGIN_FAILED"].includes(error.code);
+  $("#empty-result").hidden = true;
+  $("#result-card").hidden = true;
+  $("#multiple-result-card").hidden = true;
+  $("#loading-result").hidden = true;
+  $("#query-error-result").hidden = false;
 }
 
 function showLogin() {
@@ -87,6 +142,7 @@ function showApp() {
   $("#current-user-avatar").textContent = username.slice(0, 2).toUpperCase();
   $("#users-nav-item").hidden = !canManageUsers();
   const isAdmin = state.user?.role === "admin";
+  $("#create-user-form").classList.toggle("supervisor-create-card", !isAdmin);
   $("#new-user-role-field").hidden = !isAdmin;
   $("#new-user-role").disabled = !isAdmin;
   $("#new-user-role").value = "operator";
@@ -158,7 +214,9 @@ function renderSelectedPortal() {
   pill.innerHTML = `<span></span> ${escapeHtml(statusLabel)}`;
   connectButton.hidden = false;
   connectButton.dataset.connectPortal = connectionToOpen.id;
-  connectButton.textContent = connected.length === connections.length && connectionToOpen.mode === "real"
+  const allConnected = connected.length === connections.length && connectionToOpen.mode === "real";
+  connectButton.classList.toggle("button-connected", allConnected);
+  connectButton.textContent = allConnected
     ? "Reconectar acesso"
     : "Conectar acesso";
   $("#query-button").disabled = connected.length === 0;
@@ -173,7 +231,9 @@ function renderPortal(portal) {
   const connectButtons = $$(`[data-connect-portal="${portal.id}"]`);
   connectButtons.forEach((connectButton) => {
     connectButton.hidden = false;
-    connectButton.textContent = portal.state === "connected" && portal.mode === "real"
+    const isConnected = portal.state === "connected" && portal.mode === "real";
+    connectButton.classList.toggle("button-connected", isConnected);
+    connectButton.textContent = isConnected
       ? "Reconectar acesso"
       : "Conectar acesso";
   });
@@ -186,7 +246,7 @@ async function loadPortals() {
     payload.portals.forEach(renderPortal);
     renderSelectedPortal();
   } catch (error) {
-    showToast(error.message);
+    showErrorToast(error);
   }
 }
 
@@ -280,6 +340,7 @@ function resetQueryResult() {
   $("#result-card").hidden = true;
   $("#multiple-result-card").hidden = true;
   $("#empty-result").hidden = false;
+  hideQueryError();
   $("#cpf-input").focus();
 }
 
@@ -294,7 +355,7 @@ async function loadHistory() {
         </tr>`).join("")
       : '<tr><td colspan="5" class="empty-table">Nenhuma consulta realizada.</td></tr>';
   } catch (error) {
-    showToast(error.message);
+    showErrorToast(error);
   }
 }
 
@@ -302,16 +363,16 @@ async function loadUsers() {
   try {
     const { users } = await api("/api/users");
     $("#users-body").innerHTML = users.map((user) => `<tr>
-      <td><strong>${escapeHtml(user.username)}</strong></td>
-      <td><span class="user-role">${roleLabels[user.role] || "Vendedor"}</span></td>
-      <td>${escapeHtml(new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(user.createdAt)))}</td>
-      <td><div class="user-actions">
+      <td data-label="Usuário"><strong>${escapeHtml(user.username)}</strong></td>
+      <td data-label="Perfil"><span class="user-role">${roleLabels[user.role] || "Vendedor"}</span></td>
+      <td data-label="Criado em">${escapeHtml(new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(user.createdAt)))}</td>
+      <td data-label="Ações"><div class="user-actions">
         ${state.user?.role === "admin" || user.role === "operator" ? `<button class="button button-secondary" data-reset-user="${user.username}" type="button">Redefinir senha</button>` : ""}
         ${state.user?.role === "admin" && user.role !== "admin" ? `<button class="button button-danger" data-remove-user="${user.username}" type="button">Remover</button>` : ""}
       </div></td>
     </tr>`).join("");
   } catch (error) {
-    showToast(error.message);
+    showErrorToast(error);
   }
 }
 
@@ -348,7 +409,7 @@ async function startConnection(portalId) {
       showToast("Portal pronto para consultas.", "success");
     }
   } catch (error) {
-    showToast(error.message);
+    showErrorToast(error);
   } finally {
     buttons.forEach((button) => {
       button.disabled = false;
@@ -407,6 +468,7 @@ $("#query-form").addEventListener("submit", async (event) => {
   $("#result-card").hidden = true;
   $("#multiple-result-card").hidden = true;
   $("#loading-result").hidden = false;
+  hideQueryError();
   try {
     const result = await api("/api/margins/query", {
       method: "POST",
@@ -431,14 +493,18 @@ $("#query-form").addEventListener("submit", async (event) => {
       renderResult(result);
     }
   } catch (error) {
-    $("#loading-result").hidden = true;
-    $("#empty-result").hidden = false;
-    showToast(error.message);
-    if (["PORTAL_NOT_CONNECTED", "PORTAL_SESSION_EXPIRED"].includes(error.code)) switchView("integrations");
+    showQueryError(error);
   } finally {
     await loadPortals();
   }
 });
+
+$("#query-error-retry").addEventListener("click", () => {
+  hideQueryError();
+  $("#empty-result").hidden = false;
+  $("#cpf-input").focus();
+});
+$("#query-error-integrations").addEventListener("click", () => switchView("integrations"));
 
 $("#new-query-button").addEventListener("click", resetQueryResult);
 $("#new-multiple-query-button").addEventListener("click", resetQueryResult);
@@ -462,7 +528,7 @@ $("#create-user-form").addEventListener("submit", async (event) => {
     await loadUsers();
     showToast(`${roleLabels[requestedRole]} criado com sucesso.`, "success");
   } catch (error) {
-    showToast(error.message);
+    showErrorToast(error);
   } finally {
     button.disabled = false;
   }
@@ -489,7 +555,7 @@ $("#users-body").addEventListener("click", async (event) => {
     showToast("Acesso removido com sucesso.", "success");
   } catch (error) {
     removeButton.disabled = false;
-    showToast(error.message);
+    showErrorToast(error);
   }
 });
 
@@ -505,7 +571,7 @@ $("#user-password-form").addEventListener("submit", async (event) => {
     $("#user-password-dialog").close();
     showToast("Senha redefinida. As sessões anteriores foram encerradas.", "success");
   } catch (error) {
-    showToast(error.message);
+    showErrorToast(error);
   } finally {
     button.disabled = false;
   }
@@ -594,7 +660,7 @@ $("#query-captcha-form").addEventListener("submit", async (event) => {
     if (error.code === "QUERY_CHALLENGE_INVALID") {
       state.activeQueryChallengeId = null;
       $("#query-captcha-dialog").close();
-      showToast(error.message);
+      showQueryError(error);
     }
   } finally {
     button.disabled = false;
