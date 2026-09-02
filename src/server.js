@@ -4,12 +4,15 @@ import { createServer } from "node:http";
 import { dirname, extname, isAbsolute, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { config, validateConfig } from "./config.js";
+import { createAuditLog } from "./audit-log.js";
+import { createHistoryStore } from "./history-store.js";
 import { isValidCpf, normalizeCpf } from "./cpf.js";
 import { createPortalService } from "./portal-service.js";
 import { PortalError } from "./portals/errors.js";
 import { normalizeRegistration } from "./registration.js";
 import {
   createSessionStore,
+  createLoginRateLimiter,
   expiredSessionCookie,
   parseCookies,
   sessionCookie,
@@ -35,7 +38,14 @@ const userStore = createUserStore({
   seedUsers: config.users,
 });
 const sessions = createSessionStore(config.sessionSecret);
-const portals = createPortalService(config);
+const portals = createPortalService(config, {
+  historyStore: createHistoryStore({
+    filePath: join(rootDir, ".data", "query-history.json"),
+    secret: config.sessionSecret,
+  }),
+});
+const loginRateLimiter = createLoginRateLimiter();
+const audit = createAuditLog(join(rootDir, ".data", "audit.ndjson"));
 
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
@@ -92,6 +102,35 @@ function authSession(request) {
   return { token: cookies.scagi_session, session: sessions.read(cookies.scagi_session) };
 }
 
+function clientAddress(request) {
+  const cloudflareAddress = request.headers["cf-connecting-ip"];
+  return String(Array.isArray(cloudflareAddress) ? cloudflareAddress[0] : cloudflareAddress || request.socket.remoteAddress || "unknown").slice(0, 128);
+}
+
+function originAllowed(request) {
+  const origin = request.headers.origin;
+  if (!origin) return false;
+  try {
+    return new URL(origin).host === String(request.headers.host || "").toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+function requireSameOrigin(request, response) {
+  if (originAllowed(request)) return true;
+  json(response, 403, { error: { code: "INVALID_ORIGIN", message: "Esta ação deve ser iniciada pelo site do SCAGI." } });
+  return false;
+}
+
+function safeErrorDetails(error) {
+  const captchaImage = error?.details?.captchaImage;
+  if (typeof captchaImage === "string" && captchaImage.startsWith("data:image/") && captchaImage.length <= 1_500_000) {
+    return { captchaImage };
+  }
+  return undefined;
+}
+
 function requireAuth(request, response) {
   const authentication = authSession(request);
   if (!authentication.session) {
@@ -127,6 +166,8 @@ const server = createServer(async (request, response) => {
   const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
 
   try {
+    if (["POST", "PATCH", "DELETE"].includes(request.method) && !requireSameOrigin(request, response)) return;
+
     if (request.method === "GET" && url.pathname === "/api/session") {
       const { session } = authSession(request);
       return json(response, 200, {
@@ -137,27 +178,40 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "POST" && url.pathname === "/api/auth/login") {
+      const address = clientAddress(request);
+      const limit = loginRateLimiter.check(address);
+      if (!limit.allowed) {
+        audit.write("login_rate_limited", { address });
+        return json(response, 429, {
+          error: { code: "LOGIN_RATE_LIMITED", message: "Muitas tentativas de login. Aguarde alguns minutos e tente novamente." },
+        }, { "Retry-After": String(limit.retryAfterSeconds) });
+      }
       const body = await readJson(request);
       const user = userStore.authenticate(body.username, body.password);
       if (!user) {
+        loginRateLimiter.recordFailure(address);
+        audit.write("login_failed", { address });
         return json(response, 401, {
           error: { code: "INVALID_CREDENTIALS", message: "Usuário ou senha inválidos." },
         });
       }
+      loginRateLimiter.reset(address);
+      audit.write("login_succeeded", { address, actor: user.username });
       const token = sessions.create(user);
       return json(
         response,
         200,
         { authenticated: true, user: { username: user.username, role: user.role } },
-        { "Set-Cookie": sessionCookie(token, config.isProduction) },
+        { "Set-Cookie": sessionCookie(token, config.cookieSecure) },
       );
     }
 
     if (request.method === "POST" && url.pathname === "/api/auth/logout") {
       const { token } = authSession(request);
       sessions.destroy(token);
+      audit.write("logout", { address: clientAddress(request) });
       return json(response, 200, { authenticated: false }, {
-        "Set-Cookie": expiredSessionCookie(config.isProduction),
+        "Set-Cookie": expiredSessionCookie(config.cookieSecure),
       });
     }
 
@@ -170,7 +224,12 @@ const server = createServer(async (request, response) => {
       }
 
       if (request.method === "GET" && url.pathname === "/api/history") {
-        return json(response, 200, { history: portals.history() });
+        const history = portals.history(url.searchParams.get("cpf"));
+        return json(response, 200, {
+          history: authentication.session.role === "admin"
+            ? history
+            : history.filter(({ actor }) => actor === authentication.session.username),
+        });
       }
 
       if (url.pathname === "/api/users" || url.pathname.startsWith("/api/users/")) {
@@ -198,9 +257,9 @@ const server = createServer(async (request, response) => {
               },
             });
           }
-          return json(response, 201, {
-            user: userStore.createUser(body.username, body.password, requestedRole),
-          });
+          const user = userStore.createUser(body.username, body.password, requestedRole);
+          audit.write("user_created", { actor: authentication.session.username, target: user.username, role: user.role });
+          return json(response, 201, { user });
         }
 
         const userAction = url.pathname.match(/^\/api\/users\/([a-z0-9._-]+)(?:\/(password))?$/);
@@ -220,6 +279,7 @@ const server = createServer(async (request, response) => {
           const body = await readJson(request);
           const user = userStore.resetPassword(userAction[1], body.password);
           sessions.destroyByUsername(user.username);
+          audit.write("password_reset", { actor: authentication.session.username, target: user.username });
           return json(response, 200, { user });
         }
         if (userAction && request.method === "DELETE" && !userAction[2]) {
@@ -235,6 +295,7 @@ const server = createServer(async (request, response) => {
           }
           userStore.remove(userAction[1]);
           sessions.destroyByUsername(userAction[1]);
+          audit.write("user_removed", { actor: authentication.session.username, target: userAction[1] });
           return json(response, 200, { removed: true });
         }
       }
@@ -245,6 +306,10 @@ const server = createServer(async (request, response) => {
       if (request.method === "POST" && portalAction) {
         const [, portalId, action] = portalAction;
         if (action === "connect") {
+          if (!["admin", "supervisor"].includes(authentication.session.role)) {
+            return json(response, 403, { error: { code: "FORBIDDEN", message: "Somente administradores e supervisores podem conectar acessos compartilhados." } });
+          }
+          audit.write("portal_connection_requested", { actor: authentication.session.username, portal: portalId });
           return json(response, 200, await portals.prepareLogin(portalId));
         }
         const body = await readJson(request);
@@ -320,11 +385,14 @@ const server = createServer(async (request, response) => {
       ? "Não foi possível concluir a operação porque ocorreu uma falha inesperada no servidor. Tente novamente; se o problema persistir, informe o horário do erro ao suporte."
       : error.message;
     if (status >= 500) console.error(error);
-    json(response, status, {
-      error: { code, message, ...(error.details ? { details: error.details } : {}) },
-    });
+    const details = safeErrorDetails(error);
+    json(response, status, { error: { code, message, ...(details ? { details } : {}) } });
   }
 });
+
+server.headersTimeout = 15_000;
+server.requestTimeout = 30_000;
+server.keepAliveTimeout = 5_000;
 
 server.listen(config.port, config.host, () => {
   console.log(`SCAGI disponível em http://${config.host}:${config.port}`);
