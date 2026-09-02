@@ -3,13 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#f7f3eb" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#090908" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#090908" />
     <title>SCAGI · Grupo Império</title>
     <link rel="icon" type="image/png" sizes="256x256" href="/assets/imperio-favicon.png?v=1" />
     <link rel="apple-touch-icon" href="/assets/imperio-favicon.png?v=1" />
-    <link rel="stylesheet" href="/styles.css?v=16" />
-    <script src="/app.js?v=12" type="module"></script>
+    <link rel="stylesheet" href="/styles.css?v=17" />
+    <script src="/app.js?v=16" type="module"></script>
   </head>
   <body>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
@@ -19,7 +18,7 @@
         <div class="story-content">
           <a class="brand brand-light" href="/" aria-label="Grupo Império · SCAGI">
             <img class="brand-logo brand-logo-login" src="/assets/imperio-logo-horizontal.png" alt="Grupo Império" />
-            <span class="brand-product"><strong>SCAGI</strong><small>Sistema Centralizado de Averbadora do Grupo Império</small></span>
+            <span class="brand-product"><strong>SCAGI</strong><small>Central de Averbadoras</small></span>
           </a>
           <div class="story-copy">
             <span class="eyebrow"><img src="/assets/imperio-star.png" alt="" /> TECNOLOGIA GRUPO IMPÉRIO</span>
@@ -41,7 +40,7 @@
         <form id="login-form" class="login-card">
           <div class="mobile-brand">
             <span class="mobile-lion"><img src="/assets/imperio-lion.png" alt="" /></span>
-            <span><strong>SCAGI</strong><small>Sistema Centralizado de Averbadora do Grupo Império</small></span>
+            <span><strong>SCAGI</strong><small>Sistema Centralizado de Averbadoras do Grupo Império</small></span>
           </div>
           <span class="eyebrow eyebrow-blue">ACESSO RESTRITO</span>
           <h2>Boas-vindas</h2>
@@ -80,7 +79,7 @@
       <aside class="sidebar">
         <a class="brand brand-light sidebar-brand" href="#query" aria-label="Grupo Império · SCAGI">
           <span class="sidebar-lion"><img src="/assets/imperio-lion.png" alt="" /></span>
-          <span><strong>SCAGI</strong><small>Sistema Centralizado de Averbadora do Grupo Império</small></span>
+          <span><strong>SCAGI</strong><small>Grupo Império</small></span>
         </a>
         <nav class="main-nav" aria-label="Navegação principal">
           <button class="nav-item active" data-view="query">
@@ -219,6 +218,7 @@
             <div id="query-error-action" class="query-error-action"></div>
             <div class="query-error-buttons">
               <button id="query-error-retry" class="button button-primary" type="button">Tentar novamente</button>
+              <button id="query-error-history" class="button button-secondary" type="button" hidden>Ver consulta no histórico</button>
               <button id="query-error-integrations" class="button button-secondary" type="button" hidden>Ver integrações</button>
             </div>
           </section>
@@ -314,11 +314,12 @@
         </section>
 
         <section id="view-history" class="view" hidden>
-          <div class="page-heading"><div><span class="eyebrow eyebrow-blue">AUDITORIA</span><h2>Histórico</h2><p>Últimas consultas desta execução, com CPF protegido.</p></div></div>
+          <div class="page-heading"><div><span class="eyebrow eyebrow-blue">AUDITORIA</span><h2>Histórico</h2><p>Consultas das últimas 24 horas, com CPF protegido.</p></div></div>
           <div class="history-card">
+            <div class="history-tools"><label class="field"><span>Buscar no histórico</span><span class="input-wrap"><input id="history-search" type="search" autocomplete="off" placeholder="CPF, portal, usuário ou status" /></span></label></div>
             <table>
-              <thead><tr><th>Data e hora</th><th>Averbadora</th><th>CPF</th><th>Operador</th><th>Status</th></tr></thead>
-              <tbody id="history-body"><tr><td colspan="5" class="empty-table">Nenhuma consulta realizada.</td></tr></tbody>
+              <thead><tr><th>Data e hora</th><th>Averbadora</th><th>CPF</th><th>Operador</th><th>Status</th><th>Resultado</th></tr></thead>
+              <tbody id="history-body"><tr><td colspan="6" class="empty-table">Nenhuma consulta realizada.</td></tr></tbody>
             </table>
           </div>
         </section>
@@ -329,7 +330,7 @@
             <div><h3 id="new-user-title">Novo acesso</h3><p id="new-user-description">Crie vendedores ou supervisores para a equipe.</p></div>
             <label class="field"><span>Nome de usuário</span><span class="input-wrap"><input id="new-user-username" minlength="3" maxlength="40" autocomplete="off" required placeholder="ex.: maria.silva" /></span></label>
             <label id="new-user-role-field" class="field"><span>Privilégio</span><span class="select-wrap select-wrap-plain"><select id="new-user-role"><option value="operator">Vendedor</option><option value="supervisor">Supervisor</option></select></span></label>
-            <label class="field"><span>Senha inicial</span><span class="input-wrap"><input id="new-user-password" type="password" minlength="8" autocomplete="new-password" required placeholder="Mínimo de 8 caracteres" /></span></label>
+            <label class="field"><span>Senha inicial</span><span class="input-wrap"><input id="new-user-password" type="password" minlength="12" autocomplete="new-password" required placeholder="12+ caracteres, maiúscula, minúscula e número" /></span></label>
             <button id="create-user-button" class="button button-primary" type="submit">Criar acesso</button>
           </form>
           <div class="history-card users-card">
@@ -357,9 +358,16 @@
       <form id="user-password-form" method="dialog">
         <div class="dialog-head"><div><span class="eyebrow eyebrow-blue">SEGURANÇA</span><h2>Redefinir senha</h2></div><button id="close-user-password-dialog" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
         <p>Defina uma nova senha para <strong id="password-user-name">o vendedor</strong>. As sessões atuais desse usuário serão encerradas.</p>
-        <label class="field"><span>Nova senha</span><span class="input-wrap"><input id="reset-user-password" type="password" minlength="8" autocomplete="new-password" required placeholder="Mínimo de 8 caracteres" /></span></label>
+        <label class="field"><span>Nova senha</span><span class="input-wrap"><input id="reset-user-password" type="password" minlength="12" autocomplete="new-password" required placeholder="12+ caracteres, maiúscula, minúscula e número" /></span></label>
         <div class="dialog-actions"><button id="cancel-user-password" class="button button-secondary" type="button">Cancelar</button><button class="button button-primary" type="submit">Salvar nova senha</button></div>
       </form>
+    </dialog>
+
+    <dialog id="history-detail-dialog" class="dialog history-detail-dialog">
+      <div class="dialog-head"><div><span class="eyebrow eyebrow-blue">CONSULTA SALVA</span><h2>Margens do cliente</h2></div><button id="close-history-detail-dialog" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
+      <p id="history-detail-meta" class="history-detail-meta"></p>
+      <div id="history-detail-content" class="history-detail-content"></div>
+      <div class="dialog-actions history-detail-actions"><button id="download-history-pdf" class="button button-primary" type="button">Baixar comprovante em PDF</button></div>
     </dialog>
 
     <dialog id="query-captcha-dialog" class="dialog">
