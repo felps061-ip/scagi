@@ -21,8 +21,13 @@ function validateUsername(username) {
 }
 
 function validatePassword(password) {
-  if (String(password || "").length < 8) {
-    throw new PortalError("WEAK_PASSWORD", "A senha deve ter pelo menos 8 caracteres.", 400);
+  const value = String(password || "");
+  if (value.length < 12 || !/[a-z]/.test(value) || !/[A-Z]/.test(value) || !/\d/.test(value)) {
+    throw new PortalError(
+      "WEAK_PASSWORD",
+      "A senha deve ter ao menos 12 caracteres, incluindo letra maiúscula, minúscula e número.",
+      400,
+    );
   }
 }
 
@@ -95,7 +100,6 @@ export function createUserStore({ filePath, seedUsers }) {
       const username = normalizeUsername(usernameValue);
       const role = String(roleValue || "operator").trim().toLowerCase();
       validateUsername(username);
-      validatePassword(password);
       if (!CREATABLE_ROLES.has(role)) {
         throw new PortalError(
           "INVALID_USER_ROLE",
@@ -106,6 +110,7 @@ export function createUserStore({ filePath, seedUsers }) {
       if (users.some((user) => user.username === username)) {
         throw new PortalError("USER_EXISTS", "Esse usuário já existe.", 409);
       }
+      validatePassword(password);
       const credentials = hashPassword(password);
       const user = {
         username,
