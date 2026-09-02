@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
+const MAX_SESSIONS = 500;
 
 function safeEqual(left, right) {
   const leftBuffer = Buffer.from(String(left));
@@ -21,11 +22,20 @@ export function findUserByCredentials(users, username, password) {
 export function createSessionStore(secret) {
   const sessions = new Map();
 
+  function sweepExpired() {
+    const now = Date.now();
+    for (const [id, session] of sessions) {
+      if (session.expiresAt <= now) sessions.delete(id);
+    }
+  }
+
   function signature(id) {
     return createHmac("sha256", secret).update(id).digest("base64url");
   }
 
   function create(user) {
+    sweepExpired();
+    while (sessions.size >= MAX_SESSIONS) sessions.delete(sessions.keys().next().value);
     const id = randomBytes(32).toString("base64url");
     const identity = typeof user === "string"
       ? { username: user, role: "operator" }
@@ -64,6 +74,38 @@ export function createSessionStore(secret) {
   }
 
   return { create, read, destroy, destroyByUsername };
+}
+
+export function createLoginRateLimiter({ maxAttempts = 5, windowMs = 15 * 60 * 1000 } = {}) {
+  const attempts = new Map();
+
+  function sweep(now = Date.now()) {
+    for (const [key, entry] of attempts) {
+      if (entry.resetAt <= now) attempts.delete(key);
+    }
+  }
+
+  return {
+    check(key) {
+      sweep();
+      const entry = attempts.get(key);
+      if (!entry || entry.count < maxAttempts) return { allowed: true, retryAfterSeconds: 0 };
+      return { allowed: false, retryAfterSeconds: Math.max(1, Math.ceil((entry.resetAt - Date.now()) / 1000)) };
+    },
+    recordFailure(key) {
+      const now = Date.now();
+      sweep(now);
+      const entry = attempts.get(key);
+      if (entry) {
+        entry.count += 1;
+        return;
+      }
+      attempts.set(key, { count: 1, resetAt: now + windowMs });
+    },
+    reset(key) {
+      attempts.delete(key);
+    },
+  };
 }
 
 export function parseCookies(cookieHeader = "") {
