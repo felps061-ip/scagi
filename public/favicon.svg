@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <style>
+    image { filter: brightness(0); }
+    @media (prefers-color-scheme: dark) {
+      image { filter: brightness(0) invert(1); }
+    }
+  </style>
+  <image href="/assets/imperio-lion.png" x="4" y="4" width="56" height="56" preserveAspectRatio="xMidYMid meet" />
+</svg>

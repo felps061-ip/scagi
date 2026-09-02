@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#090908" />
+    <title>SCAGI · Grupo Império</title>
+    <link rel="icon" type="image/png" sizes="256x256" href="/assets/imperio-favicon.png?v=1" />
+    <link rel="apple-touch-icon" href="/assets/imperio-favicon.png?v=1" />
+    <link rel="stylesheet" href="/styles.css?v=17" />
+    <script src="/app.js?v=16" type="module"></script>
+  </head>
+  <body>
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+    <main id="login-view" class="login-shell">
+      <section class="login-story" aria-label="Apresentação do SCAGI">
+        <div class="story-content">
+          <a class="brand brand-light" href="/" aria-label="Grupo Império · SCAGI">
+            <img class="brand-logo brand-logo-login" src="/assets/imperio-logo-horizontal.png" alt="Grupo Império" />
+            <span class="brand-product"><strong>SCAGI</strong><small>Central de Averbadoras</small></span>
+          </a>
+          <div class="story-copy">
+            <span class="eyebrow"><img src="/assets/imperio-star.png" alt="" /> TECNOLOGIA GRUPO IMPÉRIO</span>
+            <p class="scagi-meaning"><strong>SCAGI</strong><span>Sistema Centralizado de Averbadoras do Grupo Império</span></p>
+            <h1>Uma consulta.<br /><em>Todos os portais.</em></h1>
+            <p>Centralize margens consignáveis com a segurança, a agilidade e a excelência que fazem parte do nosso império.</p>
+          </div>
+          <div class="story-stats">
+            <div><strong>08</strong><span>acessos integrados</span></div>
+            <div><strong>100%</strong><span>consulta centralizada</span></div>
+          </div>
+        </div>
+        <div class="orb orb-one"></div>
+        <div class="orb orb-two"></div>
+        <div class="grid-lines"></div>
+      </section>
+
+      <section class="login-panel">
+        <form id="login-form" class="login-card">
+          <div class="mobile-brand">
+            <span class="mobile-lion"><img src="/assets/imperio-lion.png" alt="" /></span>
+            <span><strong>SCAGI</strong><small>Sistema Centralizado de Averbadoras do Grupo Império</small></span>
+          </div>
+          <span class="eyebrow eyebrow-blue">ACESSO RESTRITO</span>
+          <h2>Boas-vindas</h2>
+          <p class="muted">Entre com suas credenciais para continuar.</p>
+
+          <label class="field">
+            <span>Usuário</span>
+            <span class="input-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 21a8 8 0 0 0-16 0M12 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" /></svg>
+              <input id="login-user" name="username" autocomplete="username" required placeholder="Seu usuário" />
+            </span>
+          </label>
+
+          <label class="field">
+            <span>Senha</span>
+            <span class="input-wrap">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z" /></svg>
+              <input id="login-password" name="password" type="password" autocomplete="current-password" required placeholder="Sua senha" />
+              <button id="toggle-password" class="icon-button" type="button" aria-label="Mostrar senha">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="2.5" /></svg>
+              </button>
+            </span>
+          </label>
+
+          <div id="login-error" class="form-error" role="alert" hidden></div>
+          <button class="button button-primary button-wide" type="submit">
+            <span>Entrar no SCAGI</span><span aria-hidden="true">→</span>
+          </button>
+          <p class="login-note"><span class="status-dot"></span> Ambiente protegido e monitorado</p>
+          <p class="build-credit">by: Tropa do Firewall - TI Império</p>
+        </form>
+      </section>
+    </main>
+
+    <div id="app-view" class="app-shell" hidden>
+      <aside class="sidebar">
+        <a class="brand brand-light sidebar-brand" href="#query" aria-label="Grupo Império · SCAGI">
+          <span class="sidebar-lion"><img src="/assets/imperio-lion.png" alt="" /></span>
+          <span><strong>SCAGI</strong><small>Grupo Império</small></span>
+        </a>
+        <nav class="main-nav" aria-label="Navegação principal">
+          <button class="nav-item active" data-view="query">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            <span>Consultar margem</span>
+          </button>
+          <button class="nav-item" data-view="integrations">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 12h8M12 8v8M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4Z" /></svg>
+            <span>Integrações</span>
+          </button>
+          <button class="nav-item" data-view="history">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5M12 7v5l3 2" /></svg>
+            <span>Histórico</span>
+          </button>
+          <button id="users-nav-item" class="nav-item" data-view="users" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M19 8v6M16 11h6" /></svg>
+            <span>Vendedores</span>
+          </button>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="secure-card">
+            <span class="secure-icon">✓</span>
+            <div><strong>Ambiente seguro</strong><small>Dados protegidos</small></div>
+          </div>
+          <button id="logout-button" class="nav-item nav-logout">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" /></svg>
+            <span>Sair</span>
+          </button>
+          <p class="build-credit sidebar-credit">by: Tropa do Firewall - TI Império</p>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <button id="menu-button" class="menu-button" aria-label="Abrir menu">☰</button>
+          <div>
+            <span class="breadcrumb">SCAGI <b>/</b> <span id="breadcrumb-current">Consultar margem</span></span>
+          </div>
+          <div class="user-chip">
+            <span id="current-user-avatar" class="avatar">AD</span>
+            <span><strong id="current-user">Administrador</strong><small id="current-user-role">Administrador</small></span>
+          </div>
+        </header>
+
+        <section id="view-query" class="view active-view">
+          <div class="page-heading">
+            <div>
+              <span class="eyebrow eyebrow-blue">CONSULTA CENTRALIZADA</span>
+              <h2>Consultar margem</h2>
+              <p>Selecione o portal e informe os dados do cliente.</p>
+            </div>
+            <div class="portal-actions">
+              <div id="portal-pill" class="portal-pill"><span></span> Verificando portal…</div>
+              <button id="query-connect-button" class="button button-primary query-connect-button" type="button" hidden>Conectar acesso</button>
+            </div>
+          </div>
+
+          <form id="query-form" class="query-card">
+            <div class="query-card-head">
+              <span class="section-icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+              </span>
+              <div><h3>Nova consulta</h3><p>Os dados são consultados diretamente na averbadora selecionada.</p></div>
+            </div>
+            <div class="query-grid">
+              <label class="field">
+                <span>Governo / Averbadora</span>
+                <span class="select-wrap">
+                  <select id="portal-select" required>
+                    <option value="portal-consignado">São Paulo e PMESP · Portal do Consignado</option>
+                    <option value="prefeitura-sao-paulo">Prefeitura de São Paulo · Portal do Consignado</option>
+                    <option value="piaui">Governo do Piauí · ConsigFácil</option>
+                    <option value="pernambuco">Pernambuco · PEConsig</option>
+                    <option value="rondonia">Rondônia · Portal de Consignação</option>
+                    <option value="maranhao">Maranhão · ConsigFácil</option>
+                    <option value="roraima">Roraima · GridSoftware</option>
+                  </select>
+                  <span id="portal-flag" class="government-flag flag-sp" aria-hidden="true">SP</span>
+                </span>
+              </label>
+              <label id="registration-field" class="field" hidden>
+                <span class="field-label-actions">
+                  <span>Matrícula do servidor</span>
+                  <a id="registration-help-link" class="field-help-link" href="https://transparencia.pi.gov.br/servidores" target="_blank" rel="noopener noreferrer">Buscar matrícula ↗</a>
+                </span>
+                <span class="input-wrap input-large">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h1M8 13h1M12 9h4M12 13h4" /></svg>
+                  <input id="registration-input" inputmode="numeric" maxlength="31" autocomplete="off" placeholder="Ex.: 214860-9" />
+                </span>
+              </label>
+              <label id="company-field" class="field" hidden>
+                <span>Base do servidor</span>
+                <span class="select-wrap select-wrap-plain">
+                  <select id="company-select">
+                    <option value="sigrh" selected>SIGRH</option>
+                    <option value="sgg">SGG</option>
+                  </select>
+                </span>
+              </label>
+              <label class="field">
+                <span>CPF do cliente</span>
+                <span class="input-wrap input-large">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM8 9h1M8 13h1M12 9h4M12 13h4" /></svg>
+                  <input id="cpf-input" inputmode="numeric" maxlength="14" autocomplete="off" required placeholder="000.000.000-00" />
+                </span>
+              </label>
+              <button id="query-button" class="button button-primary query-button" type="submit">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+                <span>Consultar margem</span>
+              </button>
+            </div>
+            <div class="privacy-note">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3M5 10h14v11H5z" /></svg>
+              A consulta deve ser realizada somente com autorização do cliente e finalidade legítima.
+            </div>
+          </form>
+
+          <section id="empty-result" class="empty-result">
+            <span class="empty-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+            </span>
+            <h3>Pronto para consultar</h3>
+            <p>O resultado da margem disponível aparecerá aqui.</p>
+          </section>
+
+          <section id="loading-result" class="loading-card" hidden>
+            <span class="spinner"></span>
+            <div><h3>Consultando o portal</h3><p>Isso pode levar alguns segundos. Não feche esta página.</p></div>
+          </section>
+
+          <section id="query-error-result" class="query-error-card" role="alert" hidden>
+            <span class="query-error-icon" aria-hidden="true">!</span>
+            <span class="eyebrow">CONSULTA NÃO CONCLUÍDA</span>
+            <h3 id="query-error-title">Não foi possível consultar o cliente</h3>
+            <p id="query-error-message">Confira os dados informados e tente novamente.</p>
+            <div id="query-error-action" class="query-error-action"></div>
+            <div class="query-error-buttons">
+              <button id="query-error-retry" class="button button-primary" type="button">Tentar novamente</button>
+              <button id="query-error-history" class="button button-secondary" type="button" hidden>Ver consulta no histórico</button>
+              <button id="query-error-integrations" class="button button-secondary" type="button" hidden>Ver integrações</button>
+            </div>
+          </section>
+
+          <section id="result-card" class="result-card" hidden>
+            <div class="result-head">
+              <div>
+                <span class="success-badge">✓ Consulta concluída</span>
+                <h3 id="result-name">Cliente</h3>
+                <p id="result-meta">—</p>
+              </div>
+              <div class="result-cpf"><span>CPF CONSULTADO</span><strong id="result-cpf">—</strong></div>
+            </div>
+            <div id="result-details" class="result-details" hidden></div>
+            <div class="provision-title">
+              <div><span class="section-icon small">R$</span><div><strong id="result-provision">Provimento 1</strong><small>Margem disponível · Total</small></div></div>
+              <span id="result-reference" class="reference-chip">Referência —</span>
+            </div>
+            <div id="margin-grid" class="margin-grid"></div>
+            <div class="result-footer">
+              <span id="result-time">Consultado agora</span>
+              <button id="new-query-button" class="button button-secondary" type="button">Nova consulta</button>
+            </div>
+          </section>
+
+          <section id="multiple-result-card" class="result-card multiple-result-card" hidden>
+            <div class="result-head">
+              <div><span class="success-badge">✓ Consulta concluída</span><h3>Matrículas encontradas</h3><p>O servidor possui mais de uma matrícula no portal de Rondônia.</p></div>
+              <div class="result-cpf"><span>CPF CONSULTADO</span><strong id="multiple-result-cpf">—</strong></div>
+            </div>
+            <div class="multiple-registration-table">
+              <table>
+                <thead><tr><th>Matrícula</th><th>Nome</th><th>CPF</th><th>Seq.</th><th>Margem disponível</th><th>Margem Cartão</th></tr></thead>
+                <tbody id="multiple-result-body"></tbody>
+              </table>
+            </div>
+            <div class="result-footer"><span id="multiple-result-time">Consultado agora</span><button id="new-multiple-query-button" class="button button-secondary" type="button">Nova consulta</button></div>
+          </section>
+        </section>
+
+        <section id="view-integrations" class="view" hidden>
+          <div class="page-heading"><div><span class="eyebrow eyebrow-blue">CONEXÕES</span><h2>Integrações</h2><p>Gerencie as sessões dos portais de margem.</p></div></div>
+          <div class="integrations-list">
+            <div class="integration-group-heading"><div><strong>Estado de São Paulo · PMESP</strong><span>Rodízio automático entre os acessos conectados</span></div><span class="pool-badge">POOL GOV SP</span></div>
+            <div class="integration-card">
+              <div class="integration-logo">01</div>
+              <div class="integration-info"><h3>Gov SP · Acesso 1</h3><p>Portal do Consignado</p><span class="inline-status" data-integration-status="gov-sp-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="gov-sp-primary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-card">
+              <div class="integration-logo">02</div>
+              <div class="integration-info"><h3>Gov SP · Acesso 2</h3><p>Portal do Consignado</p><span class="inline-status" data-integration-status="gov-sp-secondary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="gov-sp-secondary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Prefeitura de São Paulo</strong><span>Acesso municipal independente</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-city">PS</div>
+              <div class="integration-info"><h3>Prefeitura de São Paulo</h3><p>Município de São Paulo · Portal do Consignado</p><span class="inline-status" data-integration-status="prefeitura-sao-paulo-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="prefeitura-sao-paulo-primary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo do Piauí</strong><span>Acesso estadual independente</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-piaui">PI</div>
+              <div class="integration-info"><h3>Governo do Piauí</h3><p>ConsigFácil · SEAD Piauí</p><span class="inline-status" data-integration-status="piaui-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="piaui-primary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo de Pernambuco</strong><span>Acesso estadual independente</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-pernambuco">PE</div>
+              <div class="integration-info"><h3>Governo de Pernambuco</h3><p>PEConsig · Governo de Pernambuco</p><span class="inline-status" data-integration-status="pernambuco-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="pernambuco-primary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo de Rondônia</strong><span>Acesso estadual independente</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-rondonia">RO</div>
+              <div class="integration-info"><h3>Governo de Rondônia</h3><p>Portal de Consignação · Estado de Rondônia</p><span class="inline-status" data-integration-status="rondonia-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="rondonia-primary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo do Maranhão</strong><span>Acesso estadual independente</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-maranhao">MA</div>
+              <div class="integration-info"><h3>Governo do Maranhão</h3><p>ConsigFácil · Governo do Maranhão</p><span class="inline-status" data-integration-status="maranhao-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="maranhao-primary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo de Roraima</strong><span>Acesso estadual com seleção SGG/SIGRH</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-roraima">RR</div>
+              <div class="integration-info"><h3>Governo de Roraima</h3><p>Consignado GridSoftware · SGG e SIGRH</p><span class="inline-status" data-integration-status="roraima-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="roraima-primary" type="button">Conectar acesso</button>
+            </div>
+          </div>
+          <div class="info-card"><strong>Por que existe um CAPTCHA?</strong><p>Os portais exigem confirmação humana. O SCAGI mantém as credenciais no servidor e nunca contorna essa proteção. Nos portais ConsigFácil, a imagem é exibida no SCAGI; em Roraima, o operador marca o reCAPTCHA diretamente na janela oficial do portal.</p></div>
+        </section>
+
+        <section id="view-history" class="view" hidden>
+          <div class="page-heading"><div><span class="eyebrow eyebrow-blue">AUDITORIA</span><h2>Histórico</h2><p>Consultas das últimas 24 horas, com CPF protegido.</p></div></div>
+          <div class="history-card">
+            <div class="history-tools"><label class="field"><span>Buscar no histórico</span><span class="input-wrap"><input id="history-search" type="search" autocomplete="off" placeholder="CPF, portal, usuário ou status" /></span></label></div>
+            <table>
+              <thead><tr><th>Data e hora</th><th>Averbadora</th><th>CPF</th><th>Operador</th><th>Status</th><th>Resultado</th></tr></thead>
+              <tbody id="history-body"><tr><td colspan="6" class="empty-table">Nenhuma consulta realizada.</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="view-users" class="view" hidden>
+          <div class="page-heading"><div><span class="eyebrow eyebrow-blue">ADMINISTRAÇÃO</span><h2>Vendedores</h2><p>Crie e gerencie os acessos individuais da equipe.</p></div></div>
+          <form id="create-user-form" class="user-create-card">
+            <div><h3 id="new-user-title">Novo acesso</h3><p id="new-user-description">Crie vendedores ou supervisores para a equipe.</p></div>
+            <label class="field"><span>Nome de usuário</span><span class="input-wrap"><input id="new-user-username" minlength="3" maxlength="40" autocomplete="off" required placeholder="ex.: maria.silva" /></span></label>
+            <label id="new-user-role-field" class="field"><span>Privilégio</span><span class="select-wrap select-wrap-plain"><select id="new-user-role"><option value="operator">Vendedor</option><option value="supervisor">Supervisor</option></select></span></label>
+            <label class="field"><span>Senha inicial</span><span class="input-wrap"><input id="new-user-password" type="password" minlength="12" autocomplete="new-password" required placeholder="12+ caracteres, maiúscula, minúscula e número" /></span></label>
+            <button id="create-user-button" class="button button-primary" type="submit">Criar acesso</button>
+          </form>
+          <div class="history-card users-card">
+            <table>
+              <thead><tr><th>Usuário</th><th>Perfil</th><th>Criado em</th><th>Ações</th></tr></thead>
+              <tbody id="users-body"><tr><td colspan="4" class="empty-table">Carregando usuários…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="captcha-dialog" class="dialog">
+      <form id="captcha-form" method="dialog">
+        <div class="dialog-head"><div><span id="captcha-portal-name" class="eyebrow eyebrow-blue">PORTAL DO CONSIGNADO</span><h2>Confirmar acesso</h2></div><button id="close-dialog" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
+        <p id="captcha-description">Digite os caracteres exibidos pelo portal. A imagem pertence à sessão segura mantida no servidor.</p>
+        <div id="captcha-image-wrap" class="captcha-image-wrap"><img id="captcha-image" alt="CAPTCHA do portal" /></div>
+        <label id="captcha-input-field" class="field"><span>Texto do CAPTCHA</span><span class="input-wrap"><input id="captcha-input" autocomplete="off" required placeholder="Digite os caracteres" /></span></label>
+        <div id="captcha-error" class="form-error" role="alert" hidden></div>
+        <div class="dialog-actions"><button id="refresh-captcha" class="button button-secondary" type="button">Gerar outra imagem</button><button id="captcha-submit-button" class="button button-primary" type="submit">Concluir conexão</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="user-password-dialog" class="dialog">
+      <form id="user-password-form" method="dialog">
+        <div class="dialog-head"><div><span class="eyebrow eyebrow-blue">SEGURANÇA</span><h2>Redefinir senha</h2></div><button id="close-user-password-dialog" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
+        <p>Defina uma nova senha para <strong id="password-user-name">o vendedor</strong>. As sessões atuais desse usuário serão encerradas.</p>
+        <label class="field"><span>Nova senha</span><span class="input-wrap"><input id="reset-user-password" type="password" minlength="12" autocomplete="new-password" required placeholder="12+ caracteres, maiúscula, minúscula e número" /></span></label>
+        <div class="dialog-actions"><button id="cancel-user-password" class="button button-secondary" type="button">Cancelar</button><button class="button button-primary" type="submit">Salvar nova senha</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="history-detail-dialog" class="dialog history-detail-dialog">
+      <div class="dialog-head"><div><span class="eyebrow eyebrow-blue">CONSULTA SALVA</span><h2>Margens do cliente</h2></div><button id="close-history-detail-dialog" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
+      <p id="history-detail-meta" class="history-detail-meta"></p>
+      <div id="history-detail-content" class="history-detail-content"></div>
+      <div class="dialog-actions history-detail-actions"><button id="download-history-pdf" class="button button-primary" type="button">Baixar comprovante em PDF</button></div>
+    </dialog>
+
+    <dialog id="query-captcha-dialog" class="dialog">
+      <form id="query-captcha-form" method="dialog">
+        <div class="dialog-head"><div><span id="query-captcha-portal-name" class="eyebrow eyebrow-blue">CONSIGFÁCIL</span><h2>Confirmar consulta</h2></div><button id="close-query-captcha" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
+        <p>A matrícula e o CPF já foram preenchidos. Digite os caracteres da imagem para concluir a pesquisa.</p>
+        <div class="captcha-image-wrap"><img id="query-captcha-image" alt="CAPTCHA da consulta no ConsigFácil" /></div>
+        <label class="field"><span>Texto do CAPTCHA</span><span class="input-wrap"><input id="query-captcha-input" autocomplete="off" required placeholder="Digite os caracteres" /></span></label>
+        <div id="query-captcha-error" class="form-error" role="alert" hidden></div>
+        <div class="dialog-actions"><button id="cancel-query-captcha" class="button button-secondary" type="button">Cancelar</button><button class="button button-primary" type="submit">Concluir consulta</button></div>
+      </form>
+    </dialog>
+  </body>
+</html>
