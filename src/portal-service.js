@@ -9,6 +9,7 @@ import { RondoniaPortal } from "./portals/rondonia.js";
 import { RoraimaPortal } from "./portals/roraima.js";
 
 const QUERY_CHALLENGE_TTL = 10 * 60 * 1000;
+const MAX_PORTAL_QUEUE_DEPTH = 5;
 
 export function createPortalService(config, dependencies = {}) {
   const createPortal = dependencies.createPortal || ((definition) => {
@@ -29,6 +30,16 @@ export function createPortalService(config, dependencies = {}) {
     ]),
   );
   const history = [];
+  const historyStore = dependencies.historyStore || {
+    list: () => history,
+    wasQueriedToday: (actor, cpf) => history.some((entry) => (
+      entry.actor === actor && entry.status === "success" && entry.cpf === maskCpf(cpf)
+    )),
+    record: (entry) => {
+      history.unshift(entry);
+      history.splice(25);
+    },
+  };
   const roundRobinCursor = new Map();
   const queryChallenges = new Map();
 
@@ -68,9 +79,19 @@ export function createPortalService(config, dependencies = {}) {
     return [...connected.slice(start), ...connected.slice(0, start)];
   }
 
-  function record(entry) {
-    history.unshift(entry);
-    history.splice(25);
+  function record(entry, cpf) {
+    historyStore.record(entry, cpf);
+  }
+
+  function historyDetails(result) {
+    return (result?.employments || []).map((employment) => ({
+      agency: employment.agency || "Não informado",
+      registration: employment.registration || "Não informado",
+      referenceMonth: employment.referenceMonth || "Não informado",
+      nextPayrollProcessing: employment.nextPayrollProcessing || "Não informado",
+      provision: employment.provision || "Margens disponíveis",
+      margins: (employment.margins || []).map(({ product, value }) => ({ product, value })),
+    }));
   }
 
   function clearChallenge(challengeId) {
@@ -92,6 +113,17 @@ export function createPortalService(config, dependencies = {}) {
     return [...queryChallenges.entries()].find(
       ([, challenge]) => challenge.integrationId === integrationId,
     );
+  }
+
+  function runQueued(queue, operation) {
+    if (queue.pending >= MAX_PORTAL_QUEUE_DEPTH) {
+      throw new PortalError(
+        "PORTAL_BUSY",
+        "Este acesso está atendendo muitas solicitações. Aguarde alguns instantes e tente novamente.",
+        429,
+      );
+    }
+    return queue.run(operation);
   }
 
   return {
@@ -119,23 +151,30 @@ export function createPortalService(config, dependencies = {}) {
       }));
     },
 
-    history() {
-      return history;
+    history(cpf) {
+      return historyStore.list(cpf);
     },
 
     prepareLogin(portalId) {
       const { portal, queue } = getIntegration(portalId);
       const activeChallenge = activeChallengeFor(portalId);
       if (activeChallenge) clearChallenge(activeChallenge[0]);
-      return queue.run(() => portal.prepareLogin());
+      return runQueued(queue, () => portal.prepareLogin());
     },
 
     submitCaptcha(portalId, captcha) {
       const { portal, queue } = getIntegration(portalId);
-      return queue.run(() => portal.submitCaptcha(captcha));
+      return runQueued(queue, () => portal.submitCaptcha(captcha));
     },
 
     query(queryPortalId, cpf, actor, parameters = {}) {
+      if (historyStore.wasQueriedToday(actor, cpf)) {
+        throw new PortalError(
+          "CPF_ALREADY_QUERIED",
+          "Este CPF já foi consultado por você hoje. Consulte o Histórico para ver o resultado.",
+          409,
+        );
+      }
       const candidates = selectQueryIntegrations(queryPortalId);
       const startedAt = new Date().toISOString();
       return (async () => {
@@ -154,7 +193,7 @@ export function createPortalService(config, dependencies = {}) {
               clearChallenge(activeChallenge[0]);
             }
 
-            const result = await queue.run(() => portal.queryMargin(cpf, parameters));
+            const result = await runQueued(queue, () => portal.queryMargin(cpf, parameters));
             if (result?.requiresCaptcha && result.challengeType === "query_captcha") {
               const challengeId = randomUUID();
               queryChallenges.set(challengeId, {
@@ -175,9 +214,10 @@ export function createPortalService(config, dependencies = {}) {
               cpf: maskCpf(cpf),
               actor,
               status: "success",
+              details: historyDetails(result),
               startedAt,
               finishedAt: new Date().toISOString(),
-            });
+            }, cpf);
             return result;
           } catch (error) {
             if (["PORTAL_SESSION_EXPIRED", "PORTAL_NOT_CONNECTED"].includes(error.code)) {
@@ -194,7 +234,7 @@ export function createPortalService(config, dependencies = {}) {
               message: error.message,
               startedAt,
               finishedAt: new Date().toISOString(),
-            });
+            }, cpf);
             throw error;
           }
         }
@@ -213,7 +253,7 @@ export function createPortalService(config, dependencies = {}) {
           message: error.message,
           startedAt,
           finishedAt: new Date().toISOString(),
-        });
+        }, cpf);
         throw error;
       })();
     },
@@ -229,7 +269,7 @@ export function createPortalService(config, dependencies = {}) {
         );
       }
 
-      return challenge.queue.run(async () => {
+      return runQueued(challenge.queue, async () => {
         try {
           const result = await challenge.portal.submitQueryCaptcha(captcha);
           queryChallenges.delete(challengeId);
@@ -239,9 +279,10 @@ export function createPortalService(config, dependencies = {}) {
             cpf: maskCpf(challenge.cpf),
             actor,
             status: "success",
+            details: historyDetails(result),
             startedAt: challenge.startedAt,
             finishedAt: new Date().toISOString(),
-          });
+          }, challenge.cpf);
           return result;
         } catch (error) {
           if (error.code === "CAPTCHA_REJECTED") throw error;
@@ -255,7 +296,7 @@ export function createPortalService(config, dependencies = {}) {
             message: error.message,
             startedAt: challenge.startedAt,
             finishedAt: new Date().toISOString(),
-          });
+          }, challenge.cpf);
           throw error;
         }
       });
