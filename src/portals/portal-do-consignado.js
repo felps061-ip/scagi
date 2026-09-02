@@ -1,5 +1,6 @@
 import { formatCpf } from "../cpf.js";
 import { PortalError } from "./errors.js";
+import { assertTrustedPortalPage } from "./trusted-origin.js";
 
 const LOGIN_PATH = "/home?1";
 const SEARCH_PATH = "/consignatario/pesquisarMargem";
@@ -110,6 +111,7 @@ export class PortalDoConsignado {
       waitUntil: "domcontentloaded",
       timeout: 30_000,
     });
+    assertTrustedPortalPage(page, this.options.baseUrl);
 
     // A tela de servidor também possui um #username visível. Sempre selecione
     // explicitamente o login administrativo antes de preencher a credencial da
