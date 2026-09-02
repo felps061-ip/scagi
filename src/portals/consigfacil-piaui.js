@@ -1,6 +1,7 @@
 import { formatCpf } from "../cpf.js";
 import { normalizeRegistration } from "../registration.js";
 import { PortalError } from "./errors.js";
+import { assertTrustedPortalPage } from "./trusted-origin.js";
 
 const LOGIN_PATH = "/index.php";
 const SEARCH_PATH = "/controlador.php?pagina=busca_servidor_consignatario.php";
@@ -138,6 +139,7 @@ export class ConsigfacilPiaui {
       waitUntil: "domcontentloaded",
       timeout: 30_000,
     });
+    assertTrustedPortalPage(page, this.options.baseUrl);
     const username = page.locator("#usuario");
     if (!(await username.isVisible().catch(() => false))) {
       const pageSummary = await page.locator("body").innerText().catch(() => "");
