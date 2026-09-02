@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   createSessionStore,
+  createLoginRateLimiter,
   credentialsMatch,
   findUserByCredentials,
   parseCookies,
@@ -14,6 +15,15 @@ test("assina, lê e invalida sessões", () => {
   assert.equal(store.read(`${token}alterado`), null);
   store.destroy(token);
   assert.equal(store.read(token), null);
+});
+test("limita tentativas repetidas de login", () => {
+  const limiter = createLoginRateLimiter({ maxAttempts: 2, windowMs: 60_000 });
+  assert.equal(limiter.check("ip").allowed, true);
+  limiter.recordFailure("ip");
+  limiter.recordFailure("ip");
+  assert.equal(limiter.check("ip").allowed, false);
+  limiter.reset("ip");
+  assert.equal(limiter.check("ip").allowed, true);
 });
 test("compara credenciais e interpreta cookies", () => {
   assert.equal(credentialsMatch("admin", "senha", "admin", "senha"), true);
