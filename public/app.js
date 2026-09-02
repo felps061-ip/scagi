@@ -7,6 +7,8 @@ const state = {
   activeUsername: null,
   portalMode: "mock",
   activeExternalCaptcha: false,
+  history: [],
+  historyCpfMask: null,
 };
 
 const portalMetadata = {
@@ -120,6 +122,7 @@ function showQueryError(error) {
   $("#query-error-message").textContent = reason;
   $("#query-error-action").textContent = action;
   $("#query-error-integrations").hidden = !["PORTAL_NOT_CONNECTED", "PORTAL_SESSION_EXPIRED", "PORTAL_LOGIN_FAILED"].includes(error.code);
+  $("#query-error-history").hidden = error.code !== "CPF_ALREADY_QUERIED";
   $("#empty-result").hidden = true;
   $("#result-card").hidden = true;
   $("#multiple-result-card").hidden = true;
@@ -344,20 +347,157 @@ function resetQueryResult() {
   $("#cpf-input").focus();
 }
 
-async function loadHistory() {
-  try {
-    const { history } = await api("/api/history");
-    $("#history-body").innerHTML = history.length
+function renderHistory() {
+  const search = $("#history-search").value.trim().toLowerCase();
+  const searchingFullCpf = search.replace(/\D/g, "").length === 11;
+  const history = state.history.filter((item) => (
+    (!state.historyCpfMask || item.cpf === state.historyCpfMask)
+    && (searchingFullCpf || !search || [item.portal, item.cpf, item.actor, item.status]
+      .some((value) => String(value || "").toLowerCase().includes(search))
+    )
+  ));
+  $("#history-body").innerHTML = history.length
       ? history.map((item) => `<tr>
           <td>${escapeHtml(new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(item.startedAt)))}</td>
           <td>${escapeHtml(item.portal)}</td><td>${escapeHtml(item.cpf)}</td><td>${escapeHtml(item.actor)}</td>
           <td><span class="history-status ${item.status}">${item.status === "success" ? "Sucesso" : "Falha"}</span></td>
+          <td>${item.status === "success" && item.details?.length ? `<button class="button button-secondary" data-history-detail="${escapeHtml(item.id)}" type="button">Ver margem</button>` : "—"}</td>
         </tr>`).join("")
-      : '<tr><td colspan="5" class="empty-table">Nenhuma consulta realizada.</td></tr>';
+      : `<tr><td colspan="6" class="empty-table">${state.history.length ? "Nenhuma consulta encontrada." : "Nenhuma consulta nas últimas 24 horas."}</td></tr>`;
+}
+
+async function loadHistory(cpf = "") {
+  try {
+    const digits = String(cpf).replace(/\D/g, "");
+    const { history } = await api(digits.length === 11 ? `/api/history?cpf=${encodeURIComponent(digits)}` : "/api/history");
+    state.history = history;
+    renderHistory();
   } catch (error) {
     showErrorToast(error);
   }
 }
+
+$("#history-search").addEventListener("input", () => {
+  state.historyCpfMask = null;
+  const digits = $("#history-search").value.replace(/\D/g, "");
+  if (digits.length === 11) {
+    loadHistory(digits);
+    return;
+  }
+  renderHistory();
+});
+
+function showHistoryDetails(item) {
+  state.activeHistoryItem = item;
+  $("#history-detail-meta").textContent = `${item.portal} · CPF ${item.cpf} · ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(item.finishedAt || item.startedAt))}`;
+  $("#history-detail-content").innerHTML = item.details.map((detail, index) => `
+    <article class="history-detail-item">
+      <header><span>RESULTADO ${String(index + 1).padStart(2, "0")}</span><h3>${escapeHtml(detail.provision || "Margens disponíveis")}</h3></header>
+      <div class="history-detail-summary">
+        <div><span>Órgão</span><strong>${escapeHtml(detail.agency)}</strong></div>
+        <div><span>Matrícula</span><strong>${escapeHtml(detail.registration)}</strong></div>
+        <div><span>Referência</span><strong>${escapeHtml(detail.referenceMonth)}</strong></div>
+      </div>
+      <table class="history-detail-margins"><caption>Valores disponíveis</caption><tbody>${detail.margins.map((margin) => `<tr><td><span class="margin-dot"></span>${escapeHtml(margin.product)}</td><td>${escapeHtml(margin.value)}</td></tr>`).join("")}</tbody></table>
+    </article>`).join("");
+  $("#history-detail-dialog").showModal();
+}
+
+function pdfText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7e]/g, " ")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+}
+
+function downloadHistoryPdf(item) {
+  const commands = [];
+  const text = (value, x, y, size = 12, bold = false, color = "0 0 0") => {
+    commands.push(`${color} rg BT /${bold ? "F2" : "F1"} ${size} Tf ${x} ${y} Td (${pdfText(value)}) Tj ET`);
+  };
+  const box = (x, y, width, height, color) => commands.push(`${color} rg ${x} ${y} ${width} ${height} re f`);
+  const truncate = (value, length = 58) => {
+    const clean = String(value || "Não informado");
+    return clean.length > length ? `${clean.slice(0, length - 1)}...` : clean;
+  };
+  const formattedDate = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(item.finishedAt || item.startedAt));
+
+  box(0, 0, 595, 842, "0.98 0.97 0.94");
+  box(0, 648, 595, 194, "0.08 0.07 0.05");
+  box(0, 640, 595, 8, "0.80 0.61 0.12");
+  text("SCAGI  |  GRUPO IMPERIO", 48, 796, 10, true, "0.95 0.80 0.35");
+  text("Comprovante de consulta", 48, 754, 28, true, "1 1 1");
+  text("Margens registradas com CPF protegido", 48, 730, 12, false, "0.82 0.80 0.74");
+  text(`Portal: ${truncate(item.portal, 55)}`, 48, 690, 11, false, "1 1 1");
+  text(`CPF: ${item.cpf}   |   ${formattedDate}`, 48, 672, 11, false, "1 1 1");
+
+  let y = 600;
+  item.details.slice(0, 3).forEach((detail, index) => {
+    box(48, y - 38, 499, 38, "0.16 0.13 0.08");
+    text(`RESULTADO ${String(index + 1).padStart(2, "0")}`, 64, y - 16, 9, true, "0.95 0.80 0.35");
+    text(truncate(detail.provision, 48), 64, y - 31, 16, true, "1 1 1");
+    y -= 61;
+
+    box(48, y - 55, 499, 55, "1 1 1");
+    text("ORGAO", 64, y - 17, 8, true, "0.48 0.45 0.39");
+    text(truncate(detail.agency, 24), 64, y - 34, 11, true, "0.12 0.11 0.09");
+    text("MATRICULA", 245, y - 17, 8, true, "0.48 0.45 0.39");
+    text(truncate(detail.registration, 18), 245, y - 34, 11, true, "0.12 0.11 0.09");
+    text("REFERENCIA", 408, y - 17, 8, true, "0.48 0.45 0.39");
+    text(truncate(detail.referenceMonth, 14), 408, y - 34, 11, true, "0.12 0.11 0.09");
+    y -= 77;
+
+    text("VALORES DISPONIVEIS", 64, y, 9, true, "0.48 0.45 0.39");
+    y -= 16;
+    detail.margins.slice(0, 8).forEach((margin, marginIndex) => {
+      box(48, y - 29, 499, 29, marginIndex % 2 ? "0.98 0.97 0.94" : "1 1 1");
+      text(truncate(margin.product, 45), 64, y - 19, 11, true, "0.20 0.18 0.14");
+      const amount = pdfText(margin.value);
+      text(amount, 490 - (amount.length * 8), y - 20, 15, true, "0.02 0.40 0.25");
+      y -= 29;
+    });
+    y -= 24;
+  });
+  text("Documento gerado pelo SCAGI. Uso restrito a consultas autorizadas.", 48, 36, 8, false, "0.43 0.40 0.35");
+  const content = commands.join("\n");
+  const encoder = (text) => Uint8Array.from([...text].map((character) => character.charCodeAt(0) & 0xff));
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>",
+    `<< /Length ${encoder(content).length} >>\nstream\n${content}\nendstream`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>",
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  objects.forEach((object, index) => {
+    offsets.push(encoder(pdf).length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = encoder(pdf).length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.slice(1).map((offset) => `${String(offset).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  const url = URL.createObjectURL(new Blob([encoder(pdf)], { type: "application/pdf" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `scagi-margens-${new Date(item.finishedAt || item.startedAt).toISOString().slice(0, 10)}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+$("#history-body").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-history-detail]");
+  if (!button) return;
+  const item = state.history.find(({ id }) => id === button.dataset.historyDetail);
+  if (item?.details?.length) showHistoryDetails(item);
+});
+$("#close-history-detail-dialog").addEventListener("click", () => $("#history-detail-dialog").close());
+$("#download-history-pdf").addEventListener("click", () => {
+  if (state.activeHistoryItem?.details?.length) downloadHistoryPdf(state.activeHistoryItem);
+});
 
 async function loadUsers() {
   try {
@@ -505,6 +645,14 @@ $("#query-error-retry").addEventListener("click", () => {
   $("#cpf-input").focus();
 });
 $("#query-error-integrations").addEventListener("click", () => switchView("integrations"));
+$("#query-error-history").addEventListener("click", async () => {
+  const digits = $("#cpf-input").value.replace(/\D/g, "");
+  state.historyCpfMask = null;
+  $("#history-search").value = digits;
+  switchView("history");
+  await loadHistory(digits);
+  $("#history-search").focus();
+});
 
 $("#new-query-button").addEventListener("click", resetQueryResult);
 $("#new-multiple-query-button").addEventListener("click", resetQueryResult);
