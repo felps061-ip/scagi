@@ -92,9 +92,9 @@ test("alterna consultas Gov SP entre os acessos conectados", async () => {
     "roraima-primary",
   ]);
 
-  const first = await service.query("portal-consignado", "52998224725", "admin");
-  const second = await service.query("portal-consignado", "52998224725", "admin");
-  const third = await service.query("portal-consignado", "52998224725", "admin");
+  const first = await service.query("portal-consignado", "52998224725", "admin-1");
+  const second = await service.query("portal-consignado", "52998224725", "admin-2");
+  const third = await service.query("portal-consignado", "52998224725", "admin-3");
 
   assert.equal(first.connectionId, "gov-sp-primary");
   assert.equal(second.connectionId, "gov-sp-secondary");
@@ -105,6 +105,16 @@ test("alterna consultas Gov SP entre os acessos conectados", async () => {
     "Gov SP · Acesso 1",
   ]);
 
+  await service.close();
+});
+
+test("impede uma segunda consulta do mesmo CPF pelo mesmo usuário no dia", async () => {
+  const service = createPortalService({ portalMode: "mock", portals: portalDefinitions });
+  await service.query("portal-consignado", "52998224725", "vendedor1");
+  assert.throws(
+    () => service.query("portal-consignado", "52998224725", "vendedor1"),
+    (error) => error.code === "CPF_ALREADY_QUERIED" && error.status === 409,
+  );
   await service.close();
 });
 
@@ -193,7 +203,7 @@ test("consulta Roraima por CPF com SIGRH padrão ou SGG selecionado", async () =
   const sggResult = await service.query(
     "roraima",
     "52998224725",
-    "admin",
+    "admin2",
     { company: "sgg" },
   );
   assert.match(sggResult.employments[0].provision, /SGG/);
