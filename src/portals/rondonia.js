@@ -1,5 +1,6 @@
 import { formatCpf } from "../cpf.js";
 import { PortalError } from "./errors.js";
+import { assertTrustedPortalPage } from "./trusted-origin.js";
 
 const LOGIN_HASH = "#/";
 const PRIVATE_HASH = "#/privado/index";
@@ -197,6 +198,7 @@ export class RondoniaPortal {
         waitUntil: "domcontentloaded",
         timeout: 60_000,
       });
+      assertTrustedPortalPage(page, this.options.baseUrl);
       const username = page.locator('input[name="usuario"]');
       await page.waitForFunction(
         () =>
