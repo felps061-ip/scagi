@@ -1,5 +1,6 @@
 import { formatCpf } from "../cpf.js";
 import { PortalError } from "./errors.js";
+import { assertTrustedPortalPage } from "./trusted-origin.js";
 
 const PROFILE_SELECTOR = "#idEmpresaConsignataria\\:empresaConsignataria";
 const EVENT_SELECTOR = "#idEventoRubricaVerba\\:input_idEvento";
@@ -30,9 +31,12 @@ export function parseRoraimaServerRows(rows) {
 
 function valueAfterLabel(rawText, label) {
   const text = cleanText(rawText);
-  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = text.match(new RegExp(`${escaped}\\s*:?\\s*([^:]+?)(?=\\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][^:]{1,40}:|$)`, "i"));
-  return cleanText(match?.[1]) || "Não informado";
+  const marker = `${label.toLowerCase()}:`;
+  const start = text.toLowerCase().indexOf(marker);
+  if (start === -1) return "Não informado";
+  const value = text.slice(start + marker.length);
+  const nextLabel = value.search(/\s+[A-ZÁÉÍÓÚÂÊÔÃÕÇ][^:]{1,40}:/);
+  return cleanText(nextLabel === -1 ? value : value.slice(0, nextLabel)) || "Não informado";
 }
 
 export class RoraimaPortal {
@@ -145,6 +149,7 @@ export class RoraimaPortal {
         waitUntil: "domcontentloaded",
         timeout: 60_000,
       });
+      assertTrustedPortalPage(page, this.options.baseUrl);
 
       const consignatariaAccess = page.locator('[id$=":btnConsignataria"]');
       if (await consignatariaAccess.isVisible().catch(() => false)) {
@@ -160,6 +165,7 @@ export class RoraimaPortal {
         return this.status();
       }
 
+      assertTrustedPortalPage(page, this.options.baseUrl);
       const username = page.locator("#username");
       await username.waitFor({ state: "visible", timeout: 30_000 });
       await username.fill(this.options.username);
