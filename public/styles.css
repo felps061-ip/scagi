@@ -201,6 +201,9 @@ svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width:
 .integration-logo-maranhao { color: #fff; background: linear-gradient(145deg,#173f8f,#d72b35); }
 .integration-logo-roraima { color: #fff; background: linear-gradient(145deg,#21884a,#2463a0); }
 .integration-info { min-width: 0; }
+.portal-external-link { display: inline-block; margin-top: 6px; color: #8d6716; font-size: 10px; font-weight: 750; line-height: 1.35; text-decoration: none; }
+.portal-external-link:hover { color: #5f4308; text-decoration: underline; }
+.portal-external-link:focus-visible { border-radius: 3px; outline: 2px solid #b9871e; outline-offset: 3px; }
 .inline-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 9px; color: var(--muted); font-size: 10px; }
 .info-card { margin-top: 18px; padding: 20px 23px; }
 .info-card strong { font-size: 12px; }
