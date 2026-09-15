@@ -12,6 +12,7 @@ const state = {
 };
 
 const portalMetadata = {
+  acre: { code: "AC", flagClass: "flag-ac", requiresRegistration: true },
   piaui: {
     code: "PI",
     flagClass: "flag-pi",
@@ -297,6 +298,8 @@ function renderResult(result) {
   $("#result-time").textContent = `Consultado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(result.queriedAt))}`;
   const details = employment.details || {};
   const detailItems = [
+    ["Tipo do servidor", details.serverType],
+    ["Data de nascimento", details.birthDate],
     ["Cargo", details.cargo],
     ["Lotação", details.lotacao],
     ["Classificação", details.classificacao],

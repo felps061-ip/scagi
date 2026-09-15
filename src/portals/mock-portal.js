@@ -30,6 +30,15 @@ export class MockPortalDoConsignado {
     const isConsigfacil = this.options.adapter === "consigfacil";
     const isRondonia = this.options.adapter === "rondonia";
     const isRoraima = this.options.adapter === "roraima";
+    if (this.options.adapter === "acre") return {
+      portal: this.options.queryPortalId, connectionId: this.options.id, cpf: formatCpf(cpf),
+      queriedAt: new Date().toISOString(), source: "mock",
+      employments: [{ name: "SERVIDOR DE DEMONSTRAÇÃO", agency: this.options.mockAgency,
+        registration: parameters.registration, referenceMonth: "Não informado", nextPayrollProcessing: "Não informado",
+        provision: "Margem consignável", details: { serverType: "CARREIRA", birthDate: "01/01/1980" },
+        margins: [{ product: "MARGEM DISPONÍVEL", value: "2,20" }],
+      }],
+    };
     return {
       portal: this.options.queryPortalId,
       connectionId: this.options.id,

@@ -37,6 +37,22 @@ export const config = {
   portalMode,
   portals: [
     {
+      id: "acre-primary",
+      adapter: "acre",
+      queryPortalId: "acre",
+      name: "Governo do Acre",
+      governments: ["Acre"],
+      queryFields: ["registration"],
+      mockAgency: "GOVERNO DO ESTADO DO ACRE",
+      baseUrl: "https://nconsig4.fenixsoft.com.br",
+      username: process.env.PORTAL_ACRE_USERNAME || "",
+      password: process.env.PORTAL_ACRE_PASSWORD || "",
+      usernameVariable: "PORTAL_ACRE_USERNAME",
+      passwordVariable: "PORTAL_ACRE_PASSWORD",
+      browserChannel: process.env.PORTAL_BROWSER_CHANNEL || "",
+      headless: readBoolean(process.env.PLAYWRIGHT_HEADLESS, true),
+    },
+    {
       id: "gov-sp-primary",
       adapter: "portal-do-consignado",
       queryPortalId: "portal-consignado",

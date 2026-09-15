@@ -60,6 +60,15 @@ O arquivo `.env` é ignorado pelo Git. Não coloque credenciais em arquivos vers
 
 ## Testes
 
+### Governo do Acre
+
+A integração FênixSoft usa `PORTAL_ACRE_USERNAME` e `PORTAL_ACRE_PASSWORD` no `.env`.
+Selecione Acre, conecte o acesso e preencha manualmente o CAPTCHA apresentado.
+CPF e matrícula são obrigatórios. O resultado apresenta nome, matrícula, tipo do servidor,
+CPF, data de nascimento e margem disponível. Nenhuma reserva é realizada.
+O resultado é lido dos campos readonly do formulário FênixSoft, usando o HTML fornecido.
+CPF e matrícula retornados são conferidos antes de exibir os dados.
+
 ```powershell
 npm test
 ```
