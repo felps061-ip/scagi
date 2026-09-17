@@ -3,6 +3,7 @@ import { PortalError } from "./errors.js";
 import { assertTrustedPortalPage } from "./trusted-origin.js";
 import { formatCpf } from "../cpf.js";
 import { normalizeRegistration } from "../registration.js";
+import { isValidPortalAmount } from "../money.js";
 
 const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
 export async function readAcreResult(page) {
@@ -22,7 +23,7 @@ export async function readAcreResult(page) {
 }
 
 export function validateAcreResult(data, cpf, registration) {
-  if (!data.name || !data.serverType || !data.birthDate || !/^-?[\d.]+,\d{2}$/.test(data.margin || "")) {
+  if (!data.name || !data.serverType || !data.birthDate || !isValidPortalAmount(data.margin)) {
     throw new PortalError("PORTAL_RESULT_INVALID", "O Acre não apresentou todos os dados esperados. Envie o HTML da tela de resultado ao suporte.", 502);
   }
   if (String(data.cpf).replace(/\D/g, "") !== cpf || normalizeRegistration(data.registration) !== registration) {

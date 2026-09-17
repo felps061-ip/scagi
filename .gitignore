@@ -8,3 +8,5 @@ playwright-report/
 test-results/
 .data/
 diagnostico-login.json
+.security-tools/
+.security-reports/
