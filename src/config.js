@@ -49,6 +49,24 @@ export const config = {
       password: process.env.PORTAL_ACRE_PASSWORD || "",
       usernameVariable: "PORTAL_ACRE_USERNAME",
       passwordVariable: "PORTAL_ACRE_PASSWORD",
+      optional: true,
+      browserChannel: process.env.PORTAL_BROWSER_CHANNEL || "",
+      headless: readBoolean(process.env.PLAYWRIGHT_HEADLESS, true),
+    },
+    {
+      id: "mato-grosso-sul-primary",
+      adapter: "mato-grosso-sul",
+      queryPortalId: "mato-grosso-sul",
+      name: "Governo do Mato Grosso do Sul",
+      governments: ["Mato Grosso do Sul"],
+      queryFields: [],
+      mockAgency: "GOVERNO DO ESTADO DE MATO GROSSO DO SUL",
+      baseUrl: "https://econsig.ms.gov.br/ms",
+      username: process.env.PORTAL_MATO_GROSSO_SUL_USERNAME || "",
+      password: process.env.PORTAL_MATO_GROSSO_SUL_PASSWORD || "",
+      usernameVariable: "PORTAL_MATO_GROSSO_SUL_USERNAME",
+      passwordVariable: "PORTAL_MATO_GROSSO_SUL_PASSWORD",
+      optional: true,
       browserChannel: process.env.PORTAL_BROWSER_CHANNEL || "",
       headless: readBoolean(process.env.PLAYWRIGHT_HEADLESS, true),
     },
@@ -100,6 +118,7 @@ export const config = {
     {
       id: "piaui-primary",
       adapter: "consigfacil",
+      temporarilyUnavailable: true,
       queryPortalId: "piaui",
       name: "Governo do Piauí",
       governments: ["Piauí"],
@@ -116,6 +135,7 @@ export const config = {
     {
       id: "pernambuco-primary",
       adapter: "consigfacil",
+      temporarilyUnavailable: true,
       queryPortalId: "pernambuco",
       name: "Governo de Pernambuco",
       governments: ["Pernambuco"],
@@ -147,6 +167,7 @@ export const config = {
     {
       id: "maranhao-primary",
       adapter: "consigfacil",
+      temporarilyUnavailable: true,
       queryPortalId: "maranhao",
       name: "Governo do Maranhão",
       governments: ["Maranhão"],
@@ -209,6 +230,7 @@ export function validateConfig() {
 
   if (config.portalMode === "real") {
     for (const portal of config.portals) {
+      if (portal.optional && (!portal.username || !portal.password)) continue;
       if (!portal.username) errors.push(`${portal.usernameVariable} é obrigatório no modo real.`);
       if (!portal.password) errors.push(`${portal.passwordVariable} é obrigatório no modo real.`);
     }

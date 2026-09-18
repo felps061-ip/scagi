@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { config, validateConfig } from "./config.js";
 import { createAuditLog } from "./audit-log.js";
 import { createHistoryStore } from "./history-store.js";
+import { createPortalAvailabilityStore } from "./portal-availability-store.js";
 import { isValidCpf, normalizeCpf } from "./cpf.js";
 import { createPortalService } from "./portal-service.js";
 import { PortalError } from "./portals/errors.js";
@@ -20,6 +21,7 @@ import {
 import { createUserStore } from "./user-store.js";
 import {
   canCreateUser,
+  canChangeUserRole,
   canManageUsers,
   canRemoveUser,
   canResetUserPassword,
@@ -42,6 +44,9 @@ const portals = createPortalService(config, {
   historyStore: createHistoryStore({
     filePath: join(rootDir, ".data", "query-history.json"),
     secret: config.sessionSecret,
+  }),
+  availabilityStore: createPortalAvailabilityStore({
+    filePath: join(rootDir, ".data", "portal-availability.json"),
   }),
 });
 const loginRateLimiter = createLoginRateLimiter();
@@ -262,7 +267,7 @@ const server = createServer(async (request, response) => {
           return json(response, 201, { user });
         }
 
-        const userAction = url.pathname.match(/^\/api\/users\/([a-z0-9._-]+)(?:\/(password))?$/);
+        const userAction = url.pathname.match(/^\/api\/users\/([a-z0-9._-]+)(?:\/(password|role))?$/);
         if (userAction && request.method === "PATCH" && userAction[2] === "password") {
           const target = userStore.get(userAction[1]);
           if (!target) {
@@ -280,6 +285,20 @@ const server = createServer(async (request, response) => {
           const user = userStore.resetPassword(userAction[1], body.password);
           sessions.destroyByUsername(user.username);
           audit.write("password_reset", { actor: authentication.session.username, target: user.username });
+          return json(response, 200, { user });
+        }
+        if (userAction && request.method === "PATCH" && userAction[2] === "role") {
+          const target = userStore.get(userAction[1]);
+          if (!target) throw new PortalError("USER_NOT_FOUND", "Usuário não encontrado.", 404);
+          if (!canChangeUserRole(actorRole, target.role)) {
+            return json(response, 403, {
+              error: { code: "FORBIDDEN", message: "Somente administradores podem alterar privilégios de vendedores e supervisores." },
+            });
+          }
+          const body = await readJson(request);
+          const user = userStore.changeRole(userAction[1], body.role);
+          sessions.destroyByUsername(user.username);
+          audit.write("user_role_changed", { actor: authentication.session.username, target: user.username, role: user.role });
           return json(response, 200, { user });
         }
         if (userAction && request.method === "DELETE" && !userAction[2]) {
@@ -332,6 +351,7 @@ const server = createServer(async (request, response) => {
         const requirements = portals.requirements(body.portal);
         const registration = normalizeRegistration(body.registration);
         const company = ["sgg", "sigrh"].includes(body.company) ? body.company : "sigrh";
+        const pensioner = body.pensioner === "yes" ? "yes" : "no";
         if (requirements.fields.includes("registration") && !registration) {
           return json(response, 400, {
             error: { code: "REGISTRATION_REQUIRED", message: "Informe a matrícula do servidor." },
@@ -344,7 +364,7 @@ const server = createServer(async (request, response) => {
             body.portal,
             cpf,
             authentication.session.username,
-            { registration, company },
+            { registration, company, pensioner },
           ),
         );
       }

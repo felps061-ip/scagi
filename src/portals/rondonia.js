@@ -4,6 +4,9 @@ import { assertTrustedPortalPage } from "./trusted-origin.js";
 
 const LOGIN_HASH = "#/";
 const PRIVATE_HASH = "#/privado/index";
+// A rota de reserva exige uma permissão diferente e responde "Acesso não
+// autorizado" para o perfil de consulta. Esta é a tela oficial de pesquisa
+// de servidor, confirmada no portal autenticado.
 const SEARCH_HASH = "#/privado/averbacao/pesquisa";
 
 function normalizeText(value) {
@@ -11,6 +14,17 @@ function normalizeText(value) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
+}
+
+export function hasRondoniaAvailableMargin(value) {
+  const text = normalizeText(value);
+  if (!text || text.includes("sem margem")) return false;
+  const normalized = text
+    .replace(/[^0-9,.-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+  const amount = Number.parseFloat(normalized);
+  return Number.isFinite(amount) && amount > 0;
 }
 
 export function parseRondoniaSingleResult(rawText) {
@@ -159,7 +173,40 @@ export class RondoniaPortal {
   }
 
   selectionDialog() {
-    return this.page.locator(".q-dialog").filter({ hasText: /Selecionar Servidor/i }).last();
+    // O portal mantém tabelas de fundo renderizadas atrás do modal. Restrinja
+    // a leitura ao diálogo visível para não confundir "Nenhum registro" com
+    // uma matrícula do servidor.
+    return this.page.locator(".q-dialog:visible").filter({ hasText: /Selecionar Servidor/i }).last();
+  }
+
+  async waitForSearchResult() {
+    // O Quasar abre o modal antes de preencher a tabela. Esperar apenas por
+    // `tbody tr` liberava a execução na linha de fundo "Nenhum registro",
+    // fazendo o SCAGI concluir incorretamente que não existiam matrículas.
+    await this.page.waitForFunction(
+      () => {
+        const isVisible = (element) => {
+          const style = window.getComputedStyle(element);
+          return style.display !== "none" && style.visibility !== "hidden" && element.getClientRects().length > 0;
+        };
+        const dialogs = [...document.querySelectorAll(".q-dialog")]
+          .filter((element) => isVisible(element) && /Selecionar Servidor/i.test(element.textContent || ""));
+        const selectionReady = dialogs.some((element) => Boolean(element.querySelector('tbody tr input[type="radio"]')));
+        const content = document.querySelector(".q-page-container")?.textContent || "";
+        // A confirmação de login permanece no DOM por alguns segundos. Ela
+        // não é um resultado de busca e não pode interromper a espera pela
+        // tabela de matrículas.
+        const feedback = [...document.querySelectorAll(".q-notification, [role=alert]")]
+          .some((element) => (
+            isVisible(element) &&
+            /erro|indispon[ií]vel|n[aã]o foi poss[ií]vel|falha|inv[aá]lid/i.test(element.textContent || "")
+          ));
+        const singleResult = /Dados\s+do\s+Servidor/i.test(content) && /Matr[ií]cula\s*:/i.test(content);
+        return selectionReady || singleResult || feedback;
+      },
+      null,
+      { timeout: 40_000 },
+    );
   }
 
   async dismissSelectionDialog() {
@@ -187,6 +234,7 @@ export class RondoniaPortal {
       waitUntil: "domcontentloaded",
       timeout: 60_000,
     });
+    await this.page.locator('input[name="cpf"]').waitFor({ state: "visible", timeout: 20_000 });
   }
 
   async prepareLogin() {
@@ -242,7 +290,50 @@ export class RondoniaPortal {
     return this.status();
   }
 
-  async queryMargin(cpf) {
+  async openRegistrationDetail(registration) {
+    const dialog = this.selectionDialog();
+    const rows = dialog.locator("tbody tr");
+    // Não use :has() aqui: algumas versões do navegador do servidor não
+    // resolvem esse seletor dentro do modal Quasar. Filtramos pelo HTML real.
+    const rowIndex = await rows.evaluateAll((elements, expectedRegistration) => elements.findIndex((row) => (
+      Boolean(row.querySelector('input[type="radio"]')) &&
+      [...row.querySelectorAll("td")].some((cell) => cell.textContent?.replace(/\s+/g, " ").trim() === expectedRegistration)
+    )), registration);
+    if (rowIndex < 0) {
+      throw new PortalError(
+        "MARGIN_NOT_FOUND",
+        "O portal de Rondônia não manteve a matrícula selecionada na lista.",
+        404,
+      );
+    }
+    const row = rows.nth(rowIndex);
+    const choice = row.locator('input[type="radio"]');
+    // O primeiro rádio vem marcado por padrão. Clicar na célula vazia não
+    // alterava a escolha no Chromium invisível, então o detalhamento sempre
+    // voltava para a primeira matrícula, inclusive quando ela não tinha
+    // margem. Marque o controle real e confirme a alteração antes de seguir.
+    await choice.check({ force: true }).catch(async () => {
+      await choice.evaluate((input) => input.closest(".q-radio")?.click() || input.click());
+    });
+    if (!(await choice.isChecked())) {
+      throw new PortalError(
+        "PORTAL_SELECTION_FAILED",
+        "O portal de Rondônia não confirmou a matrícula selecionada.",
+        502,
+      );
+    }
+    await dialog.getByRole("button", { name: "Confirmar", exact: true }).click();
+    await this.page.waitForFunction(
+      () => {
+        const content = document.querySelector(".q-page-container")?.textContent || "";
+        return /Dados\s+do\s+Servidor/i.test(content) && /Margem\s+Dispon[ií]vel/i.test(content);
+      },
+      null,
+      { timeout: 30_000 },
+    );
+  }
+
+  async queryMargin(cpf, { registration = "", pensioner = "no" } = {}) {
     if (this.state !== "connected") {
       throw new PortalError(
         "PORTAL_NOT_CONNECTED",
@@ -264,7 +355,17 @@ export class RondoniaPortal {
       }
 
       await cpfInput.waitFor({ state: "visible", timeout: 30_000 });
-      await this.page.locator('input[name="matricula"]').fill("").catch(() => {});
+      const registrationInput = this.page.locator('input[name="matricula"]');
+      if (registration) {
+        await this.fillDigits(
+          registrationInput,
+          registration,
+          "PORTAL_REGISTRATION_FILL_FAILED",
+          "O portal de Rondônia não manteve a matrícula preenchida.",
+        );
+      } else {
+        await registrationInput.fill("").catch(() => {});
+      }
       await this.fillDigits(
         cpfInput,
         cpf,
@@ -274,28 +375,40 @@ export class RondoniaPortal {
 
       const pensionerOptions = this.page.locator('input[name="pensionista"]');
       if ((await pensionerOptions.count()) >= 2) {
-        await pensionerOptions.nth(1).check({ force: true });
+        await pensionerOptions.nth(pensioner === "yes" ? 0 : 1).check({ force: true });
       }
       await this.page.locator(".q-notification").last().waitFor({ state: "hidden", timeout: 4_000 }).catch(() => {});
       await this.page.getByRole("button", { name: "Buscar Servidor", exact: true }).click();
 
-      await this.page.waitForFunction(
-        () => {
-          const dialog = [...document.querySelectorAll(".q-dialog")].find((element) =>
-            /Selecionar Servidor/i.test(element.textContent || "") && element.querySelector("tbody tr"),
-          );
-          const content = document.querySelector(".q-page-container")?.textContent || "";
-          const feedback = [...document.querySelectorAll(".q-notification, [role=alert]")]
-            .some((element) => element.textContent?.trim());
-          const singleResult = /Dados\s+do\s+Servidor/i.test(content) && /Matr[ií]cula\s*:/i.test(content);
-          return Boolean(dialog || singleResult || feedback);
-        },
-        null,
-        { timeout: 40_000 },
-      );
+      await this.waitForSearchResult();
 
       const multipleResult = await this.extractMultipleRegistrations();
       if (multipleResult.length) {
+        const employments = [];
+        for (const choice of multipleResult) {
+          // A seleção visual do modal não é estável no Chromium invisível:
+          // ele pode manter o primeiro rádio marcado. A própria averbação
+          // aceita CPF + matrícula e abre diretamente o detalhamento certo.
+          await this.openSearchPage();
+          await this.fillDigits(
+            this.page.locator('input[name="matricula"]'),
+            choice.registration,
+            "PORTAL_REGISTRATION_FILL_FAILED",
+            "O portal de Rondônia não manteve a matrícula preenchida.",
+          );
+          await this.fillDigits(
+            this.page.locator('input[name="cpf"]'),
+            cpf,
+            "PORTAL_CPF_FILL_FAILED",
+            "O portal de Rondônia não manteve o CPF preenchido.",
+          );
+          const options = this.page.locator('input[name="pensionista"]');
+          if ((await options.count()) >= 2) await options.nth(pensioner === "yes" ? 0 : 1).check({ force: true });
+          await this.page.getByRole("button", { name: "Buscar Servidor", exact: true }).click();
+          await this.waitForSearchResult();
+          const detail = await this.extractSingleRegistration(cpf);
+          employments.push(detail || choice);
+        }
         return {
           portal: this.options.queryPortalId,
           connectionId: this.options.id,
@@ -303,7 +416,7 @@ export class RondoniaPortal {
           queriedAt: new Date().toISOString(),
           source: "real",
           view: "multiple",
-          employments: multipleResult,
+          employments,
         };
       }
 
@@ -339,25 +452,30 @@ export class RondoniaPortal {
 
   async extractMultipleRegistrations() {
     const dialog = this.selectionDialog();
-    if (!(await dialog.locator("tbody tr").count())) return [];
-
     const rows = await dialog.locator("tbody tr").evaluateAll((elements) => {
       const clean = (value) => String(value ?? "").replace(/\s+/g, " ").trim();
-      return elements.map((row) => {
-        let cells = [...row.querySelectorAll("td")].map((cell) => clean(cell.textContent));
-        if (cells.length >= 7) cells = cells.slice(-6);
+      return elements.filter((row) => row.querySelector('input[type="radio"]')).map((row) => {
+        const cells = [...row.querySelectorAll("td")].map((cell) => clean(cell.textContent));
+        // A linha possui: rádio, matrícula, nome, CPF, sequência, margens e
+        // uma célula técnica de paginação. Localize a matrícula em vez de
+        // assumir que a primeira ou a última célula é um dado de negócio.
+        const registrationIndex = cells.findIndex((cell) => /^\d+[\d-]*$/.test(cell));
+        const values = registrationIndex >= 0 ? cells.slice(registrationIndex, registrationIndex + 6) : [];
+        if (values.length < 6) return null;
         return {
-          registration: cells[0] || "Não informado",
-          name: cells[1] || "Servidor",
-          cpf: cells[2] || "Não informado",
-          sequence: cells[3] || "Não informado",
-          availableMargin: cells[4] || "Não informado",
-          cardMargin: cells[5] || "Não informado",
+          registration: values[0],
+          name: values[1] || "Servidor",
+          cpf: values[2] || "Não informado",
+          sequence: values[3] || "Não informado",
+          availableMargin: values[4] || "Não informado",
+          cardMargin: values[5] || "Não informado",
         };
-      });
+      }).filter(Boolean);
     });
 
-    return rows.map((row) => ({
+    return rows
+      .filter((row) => hasRondoniaAvailableMargin(row.availableMargin) || hasRondoniaAvailableMargin(row.cardMargin))
+      .map((row) => ({
       name: row.name,
       agency: this.options.mockAgency,
       cpf: row.cpf,
@@ -370,7 +488,7 @@ export class RondoniaPortal {
         { product: "MARGEM DISPONÍVEL", value: row.availableMargin },
         { product: "MARGEM CARTÃO", value: row.cardMargin },
       ],
-    }));
+      }));
   }
 
   async extractSingleRegistration(cpf) {

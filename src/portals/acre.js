@@ -33,6 +33,13 @@ export function validateAcreResult(data, cpf, registration) {
 }
 
 export class AcrePortal extends PortalDoConsignado {
+  constructor(options) {
+    super(options);
+    if (!options.username || !options.password) {
+      this.setStatus("not_configured", "Configure o usuário e a senha do Governo do Acre para ativar este acesso.");
+    }
+  }
+
   async settle() {
     await this.page.waitForLoadState("domcontentloaded");
     await this.page.waitForFunction(() => !window.Sys?.WebForms?.PageRequestManager?.getInstance()?.get_isInAsyncPostBack());
@@ -42,7 +49,10 @@ export class AcrePortal extends PortalDoConsignado {
   async postback(locator) {
     await Promise.all([
       this.page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => null),
-      locator.click(),
+      // O portal mantém mensagens ASP.NET sobrepostas ao formulário. O
+      // clique forçado aciona o controle real sem ficar bloqueado pelo fundo
+      // visual dessa janela.
+      locator.click({ force: true }),
     ]);
     await this.settle();
   }
@@ -58,10 +68,17 @@ export class AcrePortal extends PortalDoConsignado {
   }
 
   async feedback() {
-    return (await this.page.locator('[role="alert"]:visible, .validation-summary-errors:visible, [id*="lblMensagem"]:visible, [id*="lblErro"]:visible, #ucAjaxModalPopup_lblMensagem:visible').allTextContents()).map(clean).filter(Boolean).join(" ");
+    return (await this.page.locator('[role="alert"]:visible, .validation-summary-errors:visible, [id*="lblMensagem"]:visible, [id*="lblErro"]:visible, #ucAjaxModalPopup_lblMensagem:visible, #divMensagemPopup:visible').allTextContents()).map(clean).filter(Boolean).join(" ");
   }
 
   async prepareLogin() {
+    if (!this.options.username || !this.options.password) {
+      throw new PortalError(
+        "PORTAL_NOT_CONFIGURED",
+        "O acesso ao Governo do Acre ainda não possui usuário e senha configurados.",
+        422,
+      );
+    }
     await this.ensurePage();
     this.setStatus("connecting", "Abrindo o Governo do Acre.");
     try {
@@ -145,7 +162,12 @@ export class AcrePortal extends PortalDoConsignado {
         throw new PortalError("PORTAL_SESSION_EXPIRED", "A sessão do Acre expirou. Conecte novamente.", 409);
       }
       if (error instanceof PortalError) throw error;
-      throw new PortalError("PORTAL_QUERY_FAILED", "Não foi possível concluir a consulta no Governo do Acre.", 502);
+      const portalMessage = await this.feedback().catch(() => "");
+      throw new PortalError(
+        "PORTAL_QUERY_FAILED",
+        portalMessage || "O Governo do Acre não retornou uma mensagem para esta consulta.",
+        502,
+      );
     }
   }
 }

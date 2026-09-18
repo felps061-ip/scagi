@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseRondoniaSingleResult } from "../src/portals/rondonia.js";
+import { hasRondoniaAvailableMargin, parseRondoniaSingleResult } from "../src/portals/rondonia.js";
 
 test("interpreta o resultado individual exibido pelo portal de Rondônia", () => {
   const result = parseRondoniaSingleResult(`
@@ -27,4 +27,11 @@ Margem Cartão Benefício: Sem Margem
   assert.equal(result.availableMargin, "Sem Margem");
   assert.equal(result.cardMargin, "Sem Margem");
   assert.equal(result.benefitCardMargin, "Sem Margem");
+});
+
+test("identifica quais matrículas de Rondônia possuem margem", () => {
+  assert.equal(hasRondoniaAvailableMargin("Sem Margem"), false);
+  assert.equal(hasRondoniaAvailableMargin("0,00"), false);
+  assert.equal(hasRondoniaAvailableMargin("14.430,22"), true);
+  assert.equal(hasRondoniaAvailableMargin("423,05"), true);
 });

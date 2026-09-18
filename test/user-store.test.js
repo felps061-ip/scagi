@@ -24,6 +24,10 @@ test("cria, autentica, redefine e remove vendedores com persistência", () => {
     assert.equal(store.authenticate("maria.silva", "SenhaInicial1"), null);
     assert.equal(store.authenticate("maria.silva", "SenhaAlterada1").username, "maria.silva");
 
+    store.changeRole("maria.silva", "supervisor");
+    assert.equal(store.get("maria.silva").role, "supervisor");
+    assert.throws(() => store.changeRole("admin", "operator"), { code: "ADMIN_PROTECTED" });
+
     store.remove("maria.silva");
     assert.deepEqual(store.list().map(({ username }) => username), ["admin", "supervisor1"]);
   } finally {

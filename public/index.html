@@ -7,8 +7,8 @@
     <title>SCAGI · Grupo Império</title>
     <link rel="icon" type="image/png" sizes="256x256" href="/assets/imperio-favicon.png?v=1" />
     <link rel="apple-touch-icon" href="/assets/imperio-favicon.png?v=1" />
-    <link rel="stylesheet" href="/styles.css?v=18" />
-    <script src="/app.js?v=16" type="module"></script>
+    <link rel="stylesheet" href="/styles.css?v=24" />
+    <script src="/app.js?v=28" type="module"></script>
   </head>
   <body>
     <div id="toast-region" class="toast-region" aria-live="polite"></div>
@@ -137,6 +137,11 @@
             </div>
           </div>
 
+          <div id="portal-unavailable-alert" class="portal-unavailable-alert" role="alert" hidden>
+            <span class="portal-unavailable-icon" aria-hidden="true">!</span>
+            <div><strong>ATENÇÃO · PORTAL INDISPONÍVEL</strong><p>PORTAL INDISPONÍVEL, RETORNO EM BREVE...</p></div>
+          </div>
+
           <form id="query-form" class="query-card">
             <div class="query-card-head">
               <span class="section-icon">
@@ -147,8 +152,8 @@
             <div class="query-grid">
               <label class="field">
                 <span>Governo / Averbadora</span>
-                <span class="select-wrap">
-                  <select id="portal-select" required>
+                <span class="select-wrap portal-select-control">
+                  <select id="portal-select" required aria-hidden="true" tabindex="-1">
                     <option value="portal-consignado">São Paulo e PMESP · Portal do Consignado</option>
                     <option value="prefeitura-sao-paulo">Prefeitura de São Paulo · Portal do Consignado</option>
                     <option value="piaui">Governo do Piauí · ConsigFácil</option>
@@ -157,13 +162,29 @@
                     <option value="maranhao">Maranhão · ConsigFácil</option>
                     <option value="roraima">Roraima · GridSoftware</option>
                     <option value="acre">Acre · FênixSoft</option>
+                    <option value="mato-grosso-sul">Mato Grosso do Sul · eConsig</option>
                   </select>
-                  <span id="portal-flag" class="government-flag flag-sp" aria-hidden="true">SP</span>
+                  <button id="portal-select-trigger" class="portal-select-trigger" type="button" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="portal-flag" class="government-flag flag-sp" aria-hidden="true">SP</span>
+                    <span id="portal-select-label">São Paulo e PMESP · Portal do Consignado</span>
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5" /></svg>
+                  </button>
+                  <span id="portal-select-menu" class="portal-select-menu" role="listbox" aria-label="Governo ou averbadora" hidden>
+                    <button type="button" role="option" data-portal-option="portal-consignado">São Paulo e PMESP · Portal do Consignado</button>
+                    <button type="button" role="option" data-portal-option="prefeitura-sao-paulo">Prefeitura de São Paulo · Portal do Consignado</button>
+                    <button type="button" role="option" data-portal-option="piaui">Governo do Piauí · ConsigFácil</button>
+                    <button type="button" role="option" data-portal-option="pernambuco">Pernambuco · PEConsig</button>
+                    <button type="button" role="option" data-portal-option="rondonia">Rondônia · Portal de Consignação</button>
+                    <button type="button" role="option" data-portal-option="maranhao">Maranhão · ConsigFácil</button>
+                    <button type="button" role="option" data-portal-option="roraima">Roraima · GridSoftware</button>
+                    <button type="button" role="option" data-portal-option="acre">Acre · FênixSoft</button>
+                    <button type="button" role="option" data-portal-option="mato-grosso-sul">Mato Grosso do Sul · eConsig</button>
+                  </span>
                 </span>
               </label>
               <label id="registration-field" class="field" hidden>
                 <span class="field-label-actions">
-                  <span>Matrícula do servidor</span>
+                  <span id="registration-label">Matrícula do servidor</span>
                   <a id="registration-help-link" class="field-help-link" href="https://transparencia.pi.gov.br/servidores" target="_blank" rel="noopener noreferrer">Buscar matrícula ↗</a>
                 </span>
                 <span class="input-wrap input-large">
@@ -171,6 +192,13 @@
                   <input id="registration-input" inputmode="numeric" maxlength="31" autocomplete="off" placeholder="Ex.: 214860-9" />
                 </span>
               </label>
+              <fieldset id="pensioner-field" class="field pensioner-field" hidden>
+                <legend>Pensionista</legend>
+                <span class="pensioner-options">
+                  <label><input id="pensioner-no" name="pensioner" type="radio" value="no" checked /> Não</label>
+                  <label><input id="pensioner-yes" name="pensioner" type="radio" value="yes" /> Sim</label>
+                </span>
+              </fieldset>
               <label id="company-field" class="field" hidden>
                 <span>Base do servidor</span>
                 <span class="select-wrap select-wrap-plain">
@@ -250,12 +278,7 @@
               <div><span class="success-badge">✓ Consulta concluída</span><h3>Matrículas encontradas</h3><p>O servidor possui mais de uma matrícula no portal de Rondônia.</p></div>
               <div class="result-cpf"><span>CPF CONSULTADO</span><strong id="multiple-result-cpf">—</strong></div>
             </div>
-            <div class="multiple-registration-table">
-              <table>
-                <thead><tr><th>Matrícula</th><th>Nome</th><th>CPF</th><th>Seq.</th><th>Margem disponível</th><th>Margem Cartão</th></tr></thead>
-                <tbody id="multiple-result-body"></tbody>
-              </table>
-            </div>
+            <div id="multiple-result-list" class="multiple-result-list"></div>
             <div class="result-footer"><span id="multiple-result-time">Consultado agora</span><button id="new-multiple-query-button" class="button button-secondary" type="button">Nova consulta</button></div>
           </section>
         </section>
@@ -309,6 +332,12 @@
               <div class="integration-logo integration-logo-acre">AC</div>
               <div class="integration-info"><h3>Governo do Acre</h3><p>FênixSoft · Margem consignável</p><a class="portal-external-link" href="https://nconsig4.fenixsoft.com.br/Login.aspx" target="_blank" rel="noopener noreferrer">Acessar portal ↗</a><span class="inline-status" data-integration-status="acre-primary">Carregando…</span></div>
               <button class="button button-primary connect-button" data-connect-portal="acre-primary" type="button">Conectar acesso</button>
+            </div>
+            <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo do Mato Grosso do Sul</strong><span>Consulta por CPF e matrícula opcional</span></div></div>
+            <div class="integration-card">
+              <div class="integration-logo integration-logo-mato-grosso-sul">MS</div>
+              <div class="integration-info"><h3>Governo do Mato Grosso do Sul</h3><p>eConsig · Margem consignável</p><a class="portal-external-link" href="https://econsig.ms.gov.br/ms/v3/autenticarUsuario#no-back" target="_blank" rel="noopener noreferrer">Acessar portal ↗</a><span class="inline-status" data-integration-status="mato-grosso-sul-primary">Carregando…</span></div>
+              <button class="button button-primary connect-button" data-connect-portal="mato-grosso-sul-primary" type="button">Conectar acesso</button>
             </div>
             <div class="integration-group-heading integration-group-heading-city"><div><strong>Governo de Roraima</strong><span>Acesso estadual com seleção SGG/SIGRH</span></div></div>
             <div class="integration-card">
@@ -367,6 +396,15 @@
         <p>Defina uma nova senha para <strong id="password-user-name">o vendedor</strong>. As sessões atuais desse usuário serão encerradas.</p>
         <label class="field"><span>Nova senha</span><span class="input-wrap"><input id="reset-user-password" type="password" minlength="12" autocomplete="new-password" required placeholder="12+ caracteres, maiúscula, minúscula e número" /></span></label>
         <div class="dialog-actions"><button id="cancel-user-password" class="button button-secondary" type="button">Cancelar</button><button class="button button-primary" type="submit">Salvar nova senha</button></div>
+      </form>
+    </dialog>
+
+    <dialog id="user-role-dialog" class="dialog">
+      <form id="user-role-form" method="dialog">
+        <div class="dialog-head"><div><span class="eyebrow eyebrow-blue">ADMINISTRAÇÃO</span><h2>Alterar privilégio</h2></div><button id="close-user-role-dialog" class="dialog-close" type="button" aria-label="Fechar">×</button></div>
+        <p>Defina o privilégio de <strong id="role-user-name">este usuário</strong>. A sessão atual dele será encerrada por segurança.</p>
+        <label class="field"><span>Novo privilégio</span><span class="select-wrap select-wrap-plain"><select id="change-user-role"><option value="operator">Vendedor</option><option value="supervisor">Supervisor</option></select></span></label>
+        <div class="dialog-actions"><button id="cancel-user-role" class="button button-secondary" type="button">Cancelar</button><button class="button button-primary" type="submit">Salvar privilégio</button></div>
       </form>
     </dialog>
 

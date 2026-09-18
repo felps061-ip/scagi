@@ -8,9 +8,11 @@ import { PortalDoConsignado } from "./portals/portal-do-consignado.js";
 import { RondoniaPortal } from "./portals/rondonia.js";
 import { RoraimaPortal } from "./portals/roraima.js";
 import { AcrePortal } from "./portals/acre.js";
+import { MatoGrossoDoSulPortal } from "./portals/mato-grosso-sul.js";
 
 const QUERY_CHALLENGE_TTL = 10 * 60 * 1000;
 const MAX_PORTAL_QUEUE_DEPTH = 5;
+const BLOCKED_PORTAL_PATTERN = /usu[aá]rio\s+bloqueado|bloqueio\s+(?:preventivo|por)|pend[êe]ncias?\s+operacionais?/i;
 
 export function createPortalService(config, dependencies = {}) {
   const createPortal = dependencies.createPortal || ((definition) => {
@@ -19,6 +21,7 @@ export function createPortalService(config, dependencies = {}) {
     if (definition.adapter === "rondonia") return new RondoniaPortal(definition);
     if (definition.adapter === "roraima") return new RoraimaPortal(definition);
     if (definition.adapter === "acre") return new AcrePortal(definition);
+    if (definition.adapter === "mato-grosso-sul") return new MatoGrossoDoSulPortal(definition);
     return new PortalDoConsignado(definition);
   });
   const integrations = new Map(
@@ -44,6 +47,10 @@ export function createPortalService(config, dependencies = {}) {
   };
   const roundRobinCursor = new Map();
   const queryChallenges = new Map();
+  const availabilityStore = dependencies.availabilityStore || {
+    status: () => ({ attempts: 0, unavailable: false }),
+    recordBlockedAttempt: () => ({ attempts: 0, unavailable: false }),
+  };
 
   function getIntegration(portalId) {
     const integration = integrations.get(portalId);
@@ -128,6 +135,38 @@ export function createPortalService(config, dependencies = {}) {
     return queue.run(operation);
   }
 
+  function portalUnavailableError(portalId) {
+    const integration = getIntegration(portalId);
+    if (integration.definition.temporarilyUnavailable) {
+      return new PortalError(
+        "PORTAL_TEMPORARILY_UNAVAILABLE",
+        "Este portal está temporariamente indisponível porque o ConsigFácil está bloqueado. Não tente conectar até a liberação da averbadora.",
+        503,
+      );
+    }
+    const availability = availabilityStore.status(portalId);
+    if (!availability.unavailable) return null;
+    return new PortalError(
+      "PORTAL_UNAVAILABLE_TODAY",
+      "Este portal está indisponível hoje após 3 tentativas bloqueadas pelo próprio portal. Tente novamente amanhã ou contate o suporte da averbadora.",
+      429,
+      { attempts: availability.attempts },
+    );
+  }
+
+  async function trackConnectionAttempt(portalId, operation) {
+    const unavailable = portalUnavailableError(portalId);
+    if (unavailable) throw unavailable;
+    try {
+      return await operation();
+    } catch (error) {
+      if (!BLOCKED_PORTAL_PATTERN.test(String(error?.message || ""))) throw error;
+      const availability = availabilityStore.recordBlockedAttempt(portalId);
+      if (!availability.unavailable) throw error;
+      throw portalUnavailableError(portalId);
+    }
+  }
+
   return {
     has(queryPortalId) {
       return [...integrations.values()].some(
@@ -143,14 +182,28 @@ export function createPortalService(config, dependencies = {}) {
     },
 
     list() {
-      return [...integrations.values()].map(({ definition, portal, queue }) => ({
-        id: definition.id,
-        queryPortalId: definition.queryPortalId,
-        name: definition.name,
-        governments: definition.governments,
-        queueLength: queue.pending,
-        ...portal.status(),
-      }));
+      return [...integrations.values()].map(({ definition, portal, queue }) => {
+        const availability = availabilityStore.status(definition.id);
+        const portalStatus = portal.status();
+        const unavailable = definition.temporarilyUnavailable || availability.unavailable;
+        return {
+          id: definition.id,
+          queryPortalId: definition.queryPortalId,
+          name: definition.name,
+          governments: definition.governments,
+          queueLength: queue.pending,
+          ...portalStatus,
+          temporarilyUnavailable: Boolean(definition.temporarilyUnavailable),
+          blockedAttemptsToday: availability.attempts,
+          unavailableToday: unavailable,
+          ...(unavailable ? {
+            state: "unavailable",
+            message: definition.temporarilyUnavailable
+              ? "Temporariamente indisponível: ConsigFácil bloqueado. Aguarde a liberação da averbadora."
+              : "Indisponível hoje: o portal bloqueou 3 tentativas de conexão.",
+          } : {}),
+        };
+      });
     },
 
     history(cpf) {
@@ -161,12 +214,12 @@ export function createPortalService(config, dependencies = {}) {
       const { portal, queue } = getIntegration(portalId);
       const activeChallenge = activeChallengeFor(portalId);
       if (activeChallenge) clearChallenge(activeChallenge[0]);
-      return runQueued(queue, () => portal.prepareLogin());
+      return trackConnectionAttempt(portalId, () => runQueued(queue, () => portal.prepareLogin()));
     },
 
     submitCaptcha(portalId, captcha) {
       const { portal, queue } = getIntegration(portalId);
-      return runQueued(queue, () => portal.submitCaptcha(captcha));
+      return trackConnectionAttempt(portalId, () => runQueued(queue, () => portal.submitCaptcha(captcha)));
     },
 
     query(queryPortalId, cpf, actor, parameters = {}) {

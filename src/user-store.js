@@ -140,6 +140,22 @@ export function createUserStore({ filePath, seedUsers }) {
       return publicUser(user);
     },
 
+    changeRole(usernameValue, roleValue) {
+      const username = normalizeUsername(usernameValue);
+      const role = String(roleValue || "").trim().toLowerCase();
+      const user = users.find((candidate) => candidate.username === username);
+      if (!user) throw new PortalError("USER_NOT_FOUND", "Usuário não encontrado.", 404);
+      if (user.role === "admin") {
+        throw new PortalError("ADMIN_PROTECTED", "O privilégio do administrador principal não pode ser alterado.", 409);
+      }
+      if (!CREATABLE_ROLES.has(role)) {
+        throw new PortalError("INVALID_USER_ROLE", "O privilégio deve ser vendedor ou supervisor.", 400);
+      }
+      user.role = role;
+      persist();
+      return publicUser(user);
+    },
+
     remove(usernameValue) {
       const username = normalizeUsername(usernameValue);
       const user = users.find((candidate) => candidate.username === username);

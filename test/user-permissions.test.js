@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   canCreateUser,
+  canChangeUserRole,
   canManageUsers,
   canRemoveUser,
   canResetUserPassword,
@@ -17,6 +18,7 @@ test("limita o supervisor ao gerenciamento de vendedores", () => {
   assert.equal(canResetUserPassword("supervisor", "supervisor"), false);
   assert.equal(canResetUserPassword("supervisor", "admin"), false);
   assert.equal(canRemoveUser("supervisor"), false);
+  assert.equal(canChangeUserRole("supervisor", "operator"), false);
 });
 
 test("mantém a administração completa dos acessos com o administrador", () => {
@@ -26,6 +28,9 @@ test("mantém a administração completa dos acessos com o administrador", () =>
   assert.equal(canResetUserPassword("admin", "operator"), true);
   assert.equal(canResetUserPassword("admin", "supervisor"), true);
   assert.equal(canRemoveUser("admin"), true);
+  assert.equal(canChangeUserRole("admin", "operator"), true);
+  assert.equal(canChangeUserRole("admin", "supervisor"), true);
+  assert.equal(canChangeUserRole("admin", "admin"), false);
 });
 
 test("mostra somente vendedores ao supervisor", () => {

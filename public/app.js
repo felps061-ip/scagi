@@ -13,6 +13,13 @@ const state = {
 
 const portalMetadata = {
   acre: { code: "AC", flagClass: "flag-ac", requiresRegistration: true },
+  "mato-grosso-sul": {
+    code: "MS",
+    flagClass: "flag-ms",
+    showRegistration: true,
+    registrationOptional: true,
+    transparencyUrl: "https://www.transparencia.ms.gov.br/#/Servidores",
+  },
   piaui: {
     code: "PI",
     flagClass: "flag-pi",
@@ -25,7 +32,13 @@ const portalMetadata = {
     requiresRegistration: true,
     transparencyUrl: "https://transparencia.pe.gov.br/recursos-humanos/remuneracoes/",
   },
-  rondonia: { code: "RO", flagClass: "flag-ro" },
+  rondonia: {
+    code: "RO",
+    flagClass: "flag-ro",
+    showRegistration: true,
+    registrationOptional: true,
+    requiresPensioner: true,
+  },
   maranhao: {
     code: "MA",
     flagClass: "flag-ma",
@@ -89,12 +102,17 @@ function describeError(error, context = "operation") {
     REGISTRATION_REQUIRED: ["Matrícula obrigatória", "Este portal exige a matrícula do servidor para realizar a consulta.", "Informe a matrícula e tente novamente."],
     INVALID_PORTAL: ["Portal inválido", "A averbadora selecionada não está disponível.", "Selecione outro portal."],
     PORTAL_NOT_CONNECTED: ["Portal não conectado", "A consulta não pode começar porque não existe um acesso conectado para essa averbadora.", "Abra Integrações e conecte o acesso."],
+    PORTAL_NOT_CONFIGURED: ["Acesso ainda não configurado", "Este portal foi incluído no SCAGI, mas ainda não possui as credenciais de acesso cadastradas.", "Cadastre o usuário e a senha do portal para ativá-lo."],
     PORTAL_SESSION_EXPIRED: ["Sessão do portal expirada", "O portal encerrou a sessão utilizada pelo SCAGI.", "Reconecte o acesso em Integrações."],
     PORTAL_BUSY: ["Portal ocupado", "Este acesso está finalizando outra consulta ou aguardando uma confirmação.", "Aguarde alguns instantes e tente novamente."],
     MARGIN_NOT_FOUND: ["Margem não encontrada", "O portal não retornou uma margem para os dados informados.", "Confira CPF, matrícula e base selecionada."],
-    PORTAL_LOGIN_FAILED: ["Falha no acesso ao portal", "O portal recusou ou não concluiu a autenticação.", "Confira a conexão, o CAPTCHA e as credenciais cadastradas."],
+    PORTAL_LOGIN_FAILED: ["Mensagem do portal", error.message || "O portal não confirmou o acesso.", "Confira o aviso exibido acima antes de tentar novamente."],
+    PORTAL_QUERY_FAILED: ["Mensagem do portal", error.message || "O portal não informou o motivo da consulta não concluída.", "Confira o aviso exibido acima antes de tentar novamente."],
     CAPTCHA_REQUIRED: ["Confirmação de segurança pendente", "O portal ainda aguarda a confirmação do CAPTCHA.", "Conclua a confirmação e tente novamente."],
-    CAPTCHA_REJECTED: ["Código de segurança recusado", "O CAPTCHA informado não foi aceito ou expirou.", "Gere outro código e tente novamente."],
+    // Alguns portais retornam aqui mensagens mais específicas, como
+    // "Usuário ou senha inválidos". Preserve o texto original para não
+    // mascarar a causa com um aviso genérico de CAPTCHA.
+    CAPTCHA_REJECTED: ["Mensagem do portal", error.message || "O CAPTCHA informado não foi aceito ou expirou.", "Gere outro código e tente novamente."],
     QUERY_CHALLENGE_INVALID: ["Confirmação expirada", "A confirmação desta consulta não é mais válida.", "Inicie uma nova consulta."],
     MARGIN_CODE_NOT_FOUND: ["Convênio indisponível", "O portal não disponibilizou o código de margem necessário para este servidor.", "Confirme o vínculo no portal responsável."],
     PORTAL_CPF_FILL_FAILED: ["CPF não aceito pelo portal", "O portal apagou ou recusou o CPF informado.", "Confira o CPF e tente novamente."],
@@ -104,8 +122,13 @@ function describeError(error, context = "operation") {
   };
   if (descriptions[error.code]) return descriptions[error.code];
   if (error.status === 401) return ["Sessão encerrada", "Seu acesso ao SCAGI expirou.", "Entre novamente para continuar."];
-  if (error.status >= 500) return ["Portal temporariamente indisponível", error.message || "O portal não respondeu como esperado.", "Aguarde alguns minutos e tente novamente."];
+  if (error.status >= 500) return ["Portal retornou um erro", error.message || "O portal não informou o motivo.", "Confira o aviso acima antes de tentar novamente."];
   return [context === "query" ? "Não foi possível consultar o cliente" : "Não foi possível concluir", error.message || "A operação não pôde ser concluída.", "Confira os dados e tente novamente."];
+}
+
+function isNegativeMargin(value) {
+  const normalized = String(value ?? "").trim().replace(/^R\$\s*/i, "");
+  return /^-\s*\d/.test(normalized) || /^\(\s*\d/.test(normalized);
 }
 
 function showErrorToast(error) {
@@ -165,6 +188,8 @@ function formatStatus(portal) {
     connecting: "Conectando…",
     disconnected: "Portal desconectado",
     error: "Falha na conexão",
+    unavailable: "Indisponível hoje",
+    not_configured: "Acesso não configurado",
   };
   return portal.mode === "mock" ? "Demonstração ativa" : labels[portal.state] || "Status desconhecido";
 }
@@ -179,14 +204,22 @@ function selectedConnections() {
 function updateQueryFields() {
   const metadata = portalMetadata[$("#portal-select").value];
   const requiresRegistration = Boolean(metadata?.requiresRegistration);
+  const showsRegistration = requiresRegistration || Boolean(metadata?.showRegistration);
   const registrationField = $("#registration-field");
   const registrationInput = $("#registration-input");
   const requiresCompany = Boolean(metadata?.requiresCompany);
+  const requiresPensioner = Boolean(metadata?.requiresPensioner);
   const companyField = $("#company-field");
-  registrationField.hidden = !requiresRegistration;
+  const pensionerField = $("#pensioner-field");
+  registrationField.hidden = !showsRegistration;
   registrationInput.required = requiresRegistration;
+  $("#registration-label").textContent = metadata?.registrationOptional
+    ? "Matrícula do servidor (opcional)"
+    : "Matrícula do servidor";
   companyField.hidden = !requiresCompany;
-  $(".query-grid").classList.toggle("with-registration", requiresRegistration || requiresCompany);
+  pensionerField.hidden = !requiresPensioner;
+  $(".query-grid").classList.toggle("with-registration", showsRegistration || requiresCompany || requiresPensioner);
+  $(".query-grid").classList.toggle("with-pensioner", requiresPensioner);
   const flag = $("#portal-flag");
   flag.textContent = metadata?.code || "SP";
   flag.className = `government-flag ${metadata?.flagClass || "flag-sp"}`;
@@ -196,9 +229,15 @@ function updateQueryFields() {
 }
 
 function renderSelectedPortal() {
+  const selected = $("#portal-select").selectedOptions[0];
+  $("#portal-select-label").textContent = selected?.textContent || "Selecione uma averbadora";
+  $$('[data-portal-option]').forEach((option) => option.setAttribute("aria-selected", String(option.dataset.portalOption === $("#portal-select").value)));
   updateQueryFields();
+  const unavailableAlert = $("#portal-unavailable-alert");
+  unavailableAlert.hidden = true;
   const connections = selectedConnections();
   const connected = connections.filter((portal) => portal.state === "connected");
+  const allUnavailable = connections.length > 0 && connections.every((portal) => portal.unavailableToday);
   const connectionToOpen = connections.find((portal) => portal.state !== "connected") || connections[0];
   state.portal = connections[0] || null;
   const pill = $("#portal-pill");
@@ -206,6 +245,16 @@ function renderSelectedPortal() {
   if (!connections.length) {
     pill.className = "portal-pill warning";
     pill.innerHTML = "<span></span> Portal indisponível";
+    connectButton.hidden = true;
+    delete connectButton.dataset.connectPortal;
+    $("#query-button").disabled = true;
+    return;
+  }
+  if (allUnavailable) {
+    pill.className = "portal-pill warning";
+    const temporarilyUnavailable = connections.every((portal) => portal.temporarilyUnavailable);
+    pill.innerHTML = `<span></span> Portal ${temporarilyUnavailable ? "temporariamente indisponível" : "indisponível hoje"}`;
+    unavailableAlert.hidden = false;
     connectButton.hidden = true;
     delete connectButton.dataset.connectPortal;
     $("#query-button").disabled = true;
@@ -230,11 +279,23 @@ function renderPortal(portal) {
   state.portals.set(portal.id, portal);
   const statusElement = $(`[data-integration-status="${portal.id}"]`);
   if (statusElement) {
-    statusElement.textContent = `${formatStatus(portal)} · ${portal.message}`;
+    const unavailable = Boolean(portal.unavailableToday);
+    statusElement.textContent = unavailable
+      ? "ATENÇÃO · PORTAL INDISPONÍVEL, RETORNO EM BREVE..."
+      : `${formatStatus(portal)} · ${portal.message}`;
+    statusElement.classList.toggle("portal-unavailable-status", unavailable);
+    statusElement.closest(".integration-card")?.classList.toggle("portal-unavailable-card", unavailable);
   }
   const connectButtons = $$(`[data-connect-portal="${portal.id}"]`);
   connectButtons.forEach((connectButton) => {
     connectButton.hidden = false;
+    if (portal.unavailableToday) {
+      connectButton.disabled = true;
+      connectButton.classList.remove("button-connected");
+      connectButton.textContent = portal.temporarilyUnavailable ? "Temporariamente indisponível" : "Indisponível hoje";
+      return;
+    }
+    connectButton.disabled = false;
     const isConnected = portal.state === "connected" && portal.mode === "real";
     connectButton.classList.toggle("button-connected", isConnected);
     connectButton.textContent = isConnected
@@ -303,6 +364,8 @@ function renderResult(result) {
     ["Cargo", details.cargo],
     ["Lotação", details.lotacao],
     ["Classificação", details.classificacao],
+    ["Órgão", details.orgao],
+    ["Categoria", details.categoria],
   ].filter(([, value]) => value && value !== "Não informado");
   $("#result-details").hidden = detailItems.length === 0;
   $("#result-details").innerHTML = detailItems
@@ -311,7 +374,8 @@ function renderResult(result) {
   $("#margin-grid").innerHTML = employment.margins
     .map((margin) => {
       const isCurrency = /^\s*(?:R\$\s*)?-?[\d.]+,\d{2}\s*$/.test(margin.value);
-      return `<div class="margin-item"><span>${escapeHtml(margin.product)}</span><strong class="${isCurrency ? "" : "non-currency"}">${escapeHtml(margin.value)}</strong></div>`;
+      const classes = [isCurrency ? "" : "non-currency", isNegativeMargin(margin.value) ? "margin-negative" : ""].filter(Boolean).join(" ");
+      return `<div class="margin-item"><span>${escapeHtml(margin.product)}</span><strong class="${classes}">${escapeHtml(margin.value)}</strong></div>`;
     })
     .join("");
   $("#empty-result").hidden = true;
@@ -321,19 +385,26 @@ function renderResult(result) {
 }
 
 function renderMultipleResult(result) {
-  const marginValue = (employment, product) => employment.margins.find(
-    (margin) => margin.product === product,
-  )?.value || "Não informado";
   $("#multiple-result-cpf").textContent = result.cpf;
   $("#multiple-result-time").textContent = `Consultado em ${new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(result.queriedAt))}`;
-  $("#multiple-result-body").innerHTML = result.employments.map((employment) => `<tr>
-    <td><strong>${escapeHtml(employment.registration)}</strong></td>
-    <td>${escapeHtml(employment.name)}</td>
-    <td>${escapeHtml(employment.cpf || result.cpf)}</td>
-    <td>${escapeHtml(employment.sequence || "—")}</td>
-    <td>${escapeHtml(marginValue(employment, "MARGEM DISPONÍVEL"))}</td>
-    <td>${escapeHtml(marginValue(employment, "MARGEM CARTÃO"))}</td>
-  </tr>`).join("");
+  $("#multiple-result-list").innerHTML = result.employments.map((employment, index) => {
+    const details = [
+      ["Cargo", employment.details?.cargo],
+      ["Lotação", employment.details?.lotacao],
+      ["Classificação", employment.details?.classificacao],
+    ].filter(([, value]) => value && value !== "Não informado");
+    const margins = (employment.margins || []).map((margin) => {
+      const isCurrency = /^\s*(?:R\$\s*)?-?[\d.]+,\d{2}\s*$/.test(margin.value);
+      const classes = [isCurrency ? "" : "non-currency", isNegativeMargin(margin.value) ? "margin-negative" : ""].filter(Boolean).join(" ");
+      return `<div class="margin-item"><span>${escapeHtml(margin.product)}</span><strong class="${classes}">${escapeHtml(margin.value)}</strong></div>`;
+    }).join("");
+    return `<article class="multiple-employment-card">
+      <header class="employment-head"><div><span>MATRÍCULA ${String(index + 1).padStart(2, "0")}</span><h4>${escapeHtml(employment.name || "Servidor")}</h4><p>Matrícula ${escapeHtml(employment.registration || "Não informado")} · CPF ${escapeHtml(employment.cpf || result.cpf)}</p></div><span class="employment-sequence">${escapeHtml(employment.sequence ? `SEQ. ${employment.sequence}` : "RESULTADO")}</span></header>
+      ${details.length ? `<div class="result-details">${details.map(([label, value]) => `<div><span>${label}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}</div>` : ""}
+      <div class="provision-title"><div><span class="section-icon small">R$</span><div><strong>${escapeHtml(employment.provision || "Margens disponíveis")}</strong><small>Valores da matrícula selecionada</small></div></div><span class="reference-chip">${escapeHtml(employment.referenceMonth || "Referência não informada")}</span></div>
+      <div class="margin-grid">${margins}</div>
+    </article>`;
+  }).join("");
   $("#empty-result").hidden = true;
   $("#loading-result").hidden = true;
   $("#result-card").hidden = true;
@@ -401,7 +472,7 @@ function showHistoryDetails(item) {
         <div><span>Matrícula</span><strong>${escapeHtml(detail.registration)}</strong></div>
         <div><span>Referência</span><strong>${escapeHtml(detail.referenceMonth)}</strong></div>
       </div>
-      <table class="history-detail-margins"><caption>Valores disponíveis</caption><tbody>${detail.margins.map((margin) => `<tr><td><span class="margin-dot"></span>${escapeHtml(margin.product)}</td><td>${escapeHtml(margin.value)}</td></tr>`).join("")}</tbody></table>
+      <table class="history-detail-margins"><caption>Valores disponíveis</caption><tbody>${detail.margins.map((margin) => `<tr><td><span class="margin-dot"></span>${escapeHtml(margin.product)}</td><td class="${isNegativeMargin(margin.value) ? "margin-negative" : ""}">${escapeHtml(margin.value)}</td></tr>`).join("")}</tbody></table>
     </article>`).join("");
   $("#history-detail-dialog").showModal();
 }
@@ -459,7 +530,7 @@ function downloadHistoryPdf(item) {
       box(48, y - 29, 499, 29, marginIndex % 2 ? "0.98 0.97 0.94" : "1 1 1");
       text(truncate(margin.product, 45), 64, y - 19, 11, true, "0.20 0.18 0.14");
       const amount = pdfText(margin.value);
-      text(amount, 490 - (amount.length * 8), y - 20, 15, true, "0.02 0.40 0.25");
+      text(amount, 490 - (amount.length * 8), y - 20, 15, true, isNegativeMargin(margin.value) ? "0.75 0.10 0.16" : "0.02 0.40 0.25");
       y -= 29;
     });
     y -= 24;
@@ -511,6 +582,7 @@ async function loadUsers() {
       <td data-label="Criado em">${escapeHtml(new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(user.createdAt)))}</td>
       <td data-label="Ações"><div class="user-actions">
         ${state.user?.role === "admin" || user.role === "operator" ? `<button class="button button-secondary" data-reset-user="${user.username}" type="button">Redefinir senha</button>` : ""}
+        ${state.user?.role === "admin" && user.role !== "admin" ? `<button class="button button-secondary" data-change-role-user="${user.username}" data-current-role="${user.role}" type="button">Alterar privilégio</button>` : ""}
         ${state.user?.role === "admin" && user.role !== "admin" ? `<button class="button button-danger" data-remove-user="${user.username}" type="button">Remover</button>` : ""}
       </div></td>
     </tr>`).join("");
@@ -597,6 +669,27 @@ $$(".nav-item[data-view]").forEach((button) => button.addEventListener("click", 
 $("#menu-button").addEventListener("click", () => $(".sidebar").classList.toggle("open"));
 $("#cpf-input").addEventListener("input", (event) => { event.target.value = formatCpfInput(event.target.value); });
 $("#portal-select").addEventListener("change", renderSelectedPortal);
+$("#portal-select-trigger").addEventListener("click", () => {
+  const control = $(".portal-select-control");
+  const menu = $("#portal-select-menu");
+  const open = menu.hidden;
+  menu.hidden = !open;
+  control.classList.toggle("open", open);
+  $("#portal-select-trigger").setAttribute("aria-expanded", String(open));
+});
+$$('[data-portal-option]').forEach((option) => option.addEventListener("click", () => {
+  $("#portal-select").value = option.dataset.portalOption;
+  $("#portal-select-menu").hidden = true;
+  $(".portal-select-control").classList.remove("open");
+  $("#portal-select-trigger").setAttribute("aria-expanded", "false");
+  renderSelectedPortal();
+}));
+document.addEventListener("click", (event) => {
+  if (event.target.closest(".portal-select-control")) return;
+  $("#portal-select-menu").hidden = true;
+  $(".portal-select-control").classList.remove("open");
+  $("#portal-select-trigger").setAttribute("aria-expanded", "false");
+});
 $$('[data-connect-portal]').forEach((button) => {
   button.addEventListener("click", () => startConnection(button.dataset.connectPortal));
 });
@@ -620,6 +713,7 @@ $("#query-form").addEventListener("submit", async (event) => {
         cpf: $("#cpf-input").value,
         registration: $("#registration-input").value,
         company: $("#company-select").value,
+        pensioner: $("input[name=\"pensioner\"]:checked")?.value || "no",
       }),
     });
     if (result.requiresCaptcha && result.challengeId) {
@@ -695,6 +789,15 @@ $("#users-body").addEventListener("click", async (event) => {
     return;
   }
 
+  const roleButton = event.target.closest("[data-change-role-user]");
+  if (roleButton) {
+    state.activeUsername = roleButton.dataset.changeRoleUser;
+    $("#role-user-name").textContent = state.activeUsername;
+    $("#change-user-role").value = roleButton.dataset.currentRole;
+    $("#user-role-dialog").showModal();
+    return;
+  }
+
   const removeButton = event.target.closest("[data-remove-user]");
   if (!removeButton) return;
   const username = removeButton.dataset.removeUser;
@@ -728,8 +831,29 @@ $("#user-password-form").addEventListener("submit", async (event) => {
   }
 });
 
+$("#user-role-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  try {
+    await api(`/api/users/${state.activeUsername}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role: $("#change-user-role").value }),
+    });
+    $("#user-role-dialog").close();
+    await loadUsers();
+    showToast("Privilégio atualizado. As sessões anteriores foram encerradas.", "success");
+  } catch (error) {
+    showErrorToast(error);
+  } finally {
+    button.disabled = false;
+  }
+});
+
 $("#close-user-password-dialog").addEventListener("click", () => $("#user-password-dialog").close());
 $("#cancel-user-password").addEventListener("click", () => $("#user-password-dialog").close());
+$("#close-user-role-dialog").addEventListener("click", () => $("#user-role-dialog").close());
+$("#cancel-user-role").addEventListener("click", () => $("#user-role-dialog").close());
 
 $("#close-dialog").addEventListener("click", () => $("#captcha-dialog").close());
 $("#refresh-captcha").addEventListener("click", () => startConnection(state.activePortalId));

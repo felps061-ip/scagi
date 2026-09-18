@@ -17,6 +17,10 @@ export function canRemoveUser(actorRole) {
   return actorRole === "admin";
 }
 
+export function canChangeUserRole(actorRole, targetRole) {
+  return actorRole === "admin" && targetRole !== "admin";
+}
+
 export function visibleUsersForRole(users, actorRole) {
   return actorRole === "supervisor"
     ? users.filter(({ role }) => role === "operator")
