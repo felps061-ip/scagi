@@ -93,6 +93,7 @@ export class MatoGrossoDoSulPortal {
     this.context = null;
     this.page = null;
     this.pendingQuery = null;
+    this.searchUrl = null;
     this.state = "disconnected";
     this.updatedAt = new Date().toISOString();
     this.message = "Conexão com o portal ainda não iniciada.";
@@ -126,6 +127,8 @@ export class MatoGrossoDoSulPortal {
   }
 
   async prepareLogin() {
+    this.searchUrl = null;
+    this.pendingQuery = null;
     if (!this.options.username || !this.options.password) throw new PortalError("PORTAL_NOT_CONFIGURED", "O acesso ao Mato Grosso do Sul ainda não possui usuário e senha configurados.", 422);
     const page = await this.ensurePage();
     this.setStatus("connecting", "Abrindo o eConsig do Mato Grosso do Sul.");
@@ -180,13 +183,15 @@ export class MatoGrossoDoSulPortal {
     if (!registration) throw new PortalError("REGISTRATION_REQUIRED", "Informe a matrícula do servidor junto com o CPF.", 400);
     try {
       assertTrustedPortalPage(this.page, this.options.baseUrl);
+      if (this.searchUrl) {
+        await this.returnToMarginSearch();
+      } else {
       // O eConsig pode manter a barra lateral recolhida após o login. O
       // botão existe no DOM, mas às vezes está visualmente oculto; o clique
       // forçado reproduz a abertura da barra antes de acessar seus links.
       await this.page.waitForLoadState('load');
       await this.page.mouse.move(2, 200);
       const operational = this.page.locator('a[href="#menuOperacional"]').first();
-      await operational.hover();
       const sideMenuToggle = this.page.locator("#btn-navbar");
       if (!await operational.isVisible() && await sideMenuToggle.isVisible().catch(() => false)) {
         // Em viewport reduzido ele pode ficar tecnicamente fora da tela,
@@ -195,6 +200,7 @@ export class MatoGrossoDoSulPortal {
         await sideMenuToggle.click();
         await this.page.waitForTimeout(250);
       }
+      await operational.hover();
       // No eConsig atual, "Consultar Margem" é um submenu oculto até que
       // "Operacional" seja aberto. Clicar diretamente no link invisível
       // fazia a consulta expirar sem sequer chegar à página de pesquisa.
@@ -207,10 +213,12 @@ export class MatoGrossoDoSulPortal {
       ]);
       await this.page.waitForLoadState("domcontentloaded").catch(() => {});
       assertTrustedPortalPage(this.page, this.options.baseUrl);
+      this.searchUrl = this.page.url();
+      }
       const cpfField = this.page.locator('input[name="SER_CPF"], input[name*="cpf" i], input[id*="cpf" i], input[placeholder*="CPF" i]').first();
       await cpfField.waitFor({ state: "visible", timeout: 20_000 });
       const registrationField = this.page.locator('input[name="RSE_MATRICULA"], input[name*="matricula" i], input[id*="matricula" i], input[placeholder*="matrícula" i]').first();
-      if (registration && await registrationField.count()) {
+      if (await registrationField.count()) {
         await registrationField.fill(registration);
         await registrationField.press("Tab");
       }
@@ -267,7 +275,14 @@ export class MatoGrossoDoSulPortal {
         throw new PortalError("MARGIN_NOT_FOUND", feedback || "O eConsig/MS não apresentou matrículas com margem disponível para este CPF.", 404);
       }
       this.pendingQuery = null;
-      return { portal: this.options.queryPortalId, connectionId: this.options.id, source: "real", cpf: formatCpf(cpf), queriedAt: new Date().toISOString(), employments };
+      const result = { portal: this.options.queryPortalId, connectionId: this.options.id, source: "real", cpf: formatCpf(cpf), queriedAt: new Date().toISOString(), employments };
+      // Preserve the completed result even if preparation for the next query fails.
+      try {
+        await this.returnToMarginSearch();
+      } catch (error) {
+        await writeDiagnostic("return-to-margin-search", error, this.page).catch(() => {});
+      }
+      return result;
     } catch (error) {
       const feedback = await this.feedback().catch(() => "");
       await writeDiagnostic("submit-query-captcha", error, this.page, feedback).catch(() => {});
@@ -276,10 +291,31 @@ export class MatoGrossoDoSulPortal {
     }
   }
 
+  async returnToMarginSearch() {
+    if (!this.searchUrl) throw new PortalError("QUERY_NOT_PREPARED", "A página de consulta do MS ainda não foi aberta.", 409);
+    assertTrustedPortalPage({ url: () => this.searchUrl }, this.options.baseUrl);
+    await this.page.goto(this.searchUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    assertTrustedPortalPage(this.page, this.options.baseUrl);
+    if (/\/autenticarUsuario(?:[?#]|$)/.test(this.page.url()) || await this.page.locator('input[name="username"], input[type="password"]').first().isVisible()) {
+      this.searchUrl = null;
+      this.setStatus("disconnected", "A sessão do eConsig/MS expirou.");
+      throw new PortalError("PORTAL_SESSION_EXPIRED", "A sessão do eConsig/MS expirou. Reconecte o acesso.", 409);
+    }
+    const cpf = this.page.locator('input[name="SER_CPF"], input[name*="cpf" i], input[id*="cpf" i], input[placeholder*="CPF" i]').first();
+    await cpf.waitFor({ state: "visible", timeout: 20_000 });
+    await cpf.fill("");
+    for (const selector of ['input[name="RSE_MATRICULA"], input[name*="matricula" i], input[id*="matricula" i]', 'input[name="codigo"], input#codigo, input[placeholder*="código" i], input[name*="captcha" i]']) {
+      const field = this.page.locator(selector).first();
+      if (await field.isVisible()) await field.fill("");
+    }
+    this.setStatus("connected", "eConsig/MS pronto para uma nova consulta.");
+  }
+
   async close() {
     await this.context?.close().catch(() => {});
     await this.browser?.close().catch(() => {});
     this.page = null; this.context = null; this.browser = null;
+    this.searchUrl = null;
     this.pendingQuery = null;
     this.setStatus("disconnected", "Integração encerrada.");
   }
