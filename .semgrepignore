@@ -1,0 +1,11 @@
+# Keep application source and tests in scope; exclude dependencies and local data.
+.git/
+node_modules/
+.data/
+.security-tools/
+.security-reports/
+.env
+.env.*
+!.env.example
+playwright-report/
+test-results/

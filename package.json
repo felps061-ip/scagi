@@ -1,0 +1,18 @@
+{
+  "name": "scagi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema Centralizado de Averbadoras do Grupo Império",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env src/server.js",
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "playwright": "1.62.1"
+  }
+}
