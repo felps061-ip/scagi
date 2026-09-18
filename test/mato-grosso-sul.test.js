@@ -1,6 +1,55 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readMatoGrossoDoSulDetails, readMatoGrossoDoSulRows } from "../src/portals/mato-grosso-sul.js";
+import { MatoGrossoDoSulPortal, readMatoGrossoDoSulDetails, readMatoGrossoDoSulRows } from "../src/portals/mato-grosso-sul.js";
+
+test("MS retorna à pesquisa na mesma página e limpa os campos", async () => {
+  const portal = new MatoGrossoDoSulPortal({ baseUrl: "https://example.org", username: "test", password: "test" });
+  portal.searchUrl = "https://example.org/v3/consultarMargem?acao=iniciar";
+  const cleared = [];
+  let navigated;
+  portal.page = {
+    goto: async (url) => { navigated = url; },
+    url: () => navigated,
+    locator: (selector) => ({ first() { return this; },
+      isVisible: async () => !selector.includes('input[name="username"]'),
+      waitFor: async () => {}, fill: async (value) => { assert.equal(value, ""); cleared.push(selector); },
+    }),
+  };
+  const page = portal.page;
+  await portal.returnToMarginSearch();
+  assert.equal(navigated, portal.searchUrl);
+  assert.equal(portal.page, page);
+  assert.equal(cleared.length, 3);
+  assert.equal(portal.state, "connected");
+});
+
+test("MS detecta sessão expirada ao retornar à pesquisa", async () => {
+  const portal = new MatoGrossoDoSulPortal({ baseUrl: "https://example.org", username: "test", password: "test" });
+  portal.searchUrl = "https://example.org/v3/consultarMargem";
+  portal.page = { goto: async () => {}, url: () => "https://example.org/v3/autenticarUsuario" };
+  await assert.rejects(portal.returnToMarginSearch(), { code: "PORTAL_SESSION_EXPIRED" });
+  assert.equal(portal.state, "disconnected");
+  assert.equal(portal.searchUrl, null);
+});
+
+test("MS preserva resultado e aguarda retorno à pesquisa após o CAPTCHA", async () => {
+  const portal = new MatoGrossoDoSulPortal({ baseUrl: "https://example.org", username: "test", password: "test" });
+  portal.pendingQuery = { cpf: "52998224725", registration: "12345" };
+  const events = [];
+  const entries = [
+    { type: "dt", text: "CPF:" }, { type: "dd", text: "52998224725" },
+    { type: "dt", text: "Servidor:" }, { type: "dd", text: "12345 - TESTE" },
+    { type: "dt", text: "Margem Disponível:" }, { type: "dd", text: "R$ 10,00" },
+  ];
+  portal.page = { waitForNavigation: async () => {}, locator: () => ({
+    first() { return this; }, fill: async () => {}, press: async () => {}, click: async () => {}, waitFor: async () => {},
+    evaluateAll: async () => { events.push("read"); return entries; },
+  }) };
+  portal.returnToMarginSearch = async () => { assert.equal(portal.pendingQuery, null); events.push("return"); };
+  const result = await portal.submitQueryCaptcha("test");
+  assert.deepEqual(events, ["read", "return"]);
+  assert.equal(result.employments[0].margins[0].value, "R$ 10,00");
+});
 
 test("mantém somente matrículas do MS que possuem margem positiva", () => {
   const result = readMatoGrossoDoSulRows([
