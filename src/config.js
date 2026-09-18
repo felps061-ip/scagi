@@ -59,7 +59,7 @@ export const config = {
       queryPortalId: "mato-grosso-sul",
       name: "Governo do Mato Grosso do Sul",
       governments: ["Mato Grosso do Sul"],
-      queryFields: [],
+      queryFields: ["registration"],
       mockAgency: "GOVERNO DO ESTADO DE MATO GROSSO DO SUL",
       baseUrl: "https://econsig.ms.gov.br/ms",
       username: process.env.PORTAL_MATO_GROSSO_SUL_USERNAME || "",

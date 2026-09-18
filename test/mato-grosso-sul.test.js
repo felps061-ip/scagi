@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readMatoGrossoDoSulDetails, readMatoGrossoDoSulRows } from "../src/portals/mato-grosso-sul.js";
+import { MatoGrossoDoSulPortal, readMatoGrossoDoSulDetails, readMatoGrossoDoSulRows } from "../src/portals/mato-grosso-sul.js";
+import { config } from "../src/config.js";
+
+test("MS exige matrícula antes de acessar o portal", async () => {
+  const definition = config.portals.find((portal) => portal.adapter === "mato-grosso-sul");
+  assert.ok(definition.queryFields.includes("registration"));
+  const portal = new MatoGrossoDoSulPortal(definition);
+  portal.state = "connected";
+  await assert.rejects(portal.queryMargin("12345678909"), { code: "REGISTRATION_REQUIRED" });
+});
 
 test("mantém somente matrículas do MS que possuem margem positiva", () => {
   const result = readMatoGrossoDoSulRows([
@@ -13,7 +22,7 @@ test("mantém somente matrículas do MS que possuem margem positiva", () => {
   assert.deepEqual(result[0].margins.map((margin) => margin.value), ["R$ 1.234,56", "R$ 200,00"]);
 });
 
-test("respeita a matrícula opcional informada para o MS", () => {
+test("respeita a matrícula informada para o MS", () => {
   const result = readMatoGrossoDoSulRows([
     ["200000-2", "JOÃO DA SILVA", "123.456.789-09", "R$ 1.234,56"],
   ], "12345678909", "2000002");

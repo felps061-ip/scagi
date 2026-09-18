@@ -17,7 +17,7 @@ const portalMetadata = {
     code: "MS",
     flagClass: "flag-ms",
     showRegistration: true,
-    registrationOptional: true,
+    requiresRegistration: true,
     transparencyUrl: "https://www.transparencia.ms.gov.br/#/Servidores",
   },
   piaui: {

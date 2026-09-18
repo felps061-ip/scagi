@@ -177,6 +177,7 @@ export class MatoGrossoDoSulPortal {
   async queryMargin(cpf, parameters = {}) {
     if (this.state !== "connected") throw new PortalError("PORTAL_NOT_CONNECTED", "Conecte o Mato Grosso do Sul antes de consultar.", 409);
     const registration = normalizeRegistration(parameters.registration);
+    if (!registration) throw new PortalError("REGISTRATION_REQUIRED", "Informe a matrícula do servidor junto com o CPF.", 400);
     try {
       assertTrustedPortalPage(this.page, this.options.baseUrl);
       // O eConsig pode manter a barra lateral recolhida após o login. O
